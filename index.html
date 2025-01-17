@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="en">
-
 <head>
     <style>
         body {
@@ -11,21 +10,101 @@
             height: 100vh;
             background-color: #37373a;
         }
+
+        #loading-container {
+            position: absolute;
+            width: 512px;
+            height: 512px;
+            background-color: #2a2a2d;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #loading-bar {
+            width: 80%;
+            height: 20px;
+            background-color: #1a1a1d;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px;
+        }
+
+        #loading-progress {
+            width: 0;
+            height: 100%;
+            background-color: #00a2ed;
+            transition: width 0.3s ease-in-out;
+        }
+
+        #loading-text {
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin-bottom: 10px;
+        }
     </style>
     <title>Flappy Bird</title>
     <link rel="icon" type="image/x-icon" href="/assets/bird.png">
 </head>
-
 <body>
-<script type="module">
-    import init from './flappy_bird.js'
+<div id="loading-container">
+    <div id="loading-text">Loading Game...</div>
+    <div id="loading-bar">
+        <div id="loading-progress"></div>
+    </div>
+</div>
 
-    init().catch((error) => {
-        if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
-            throw error;
+<script type="module">
+    const loadingContainer = document.getElementById('loading-container');
+    const loadingProgress = document.getElementById('loading-progress');
+    const loadingText = document.getElementById('loading-text');
+
+    function updateProgress(percent) {
+        const clampedPercent = Math.min(Math.max(percent, 0), 100);
+        loadingProgress.style.width = `${clampedPercent}%`;
+        loadingText.textContent = `Loading Game... ${Math.round(clampedPercent)}%`;
+    }
+
+    async function loadGame() {
+        try {
+            const response = await fetch('flappy_bird_bg.wasm');
+            const contentLength = response.headers.get('content-length');
+
+            if (contentLength === null) {
+                updateProgress(50);
+            } else {
+                const total = parseInt(contentLength, 10);
+                let loaded = 0;
+                const reader = response.body.getReader();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    loaded += value.length;
+                    updateProgress((loaded / total) * 100);
+                }
+            }
+
+            const { default: init } = await import('./flappy_bird.js');
+            await init();
+
+            loadingContainer.classList.add('hidden');
+        } catch (error) {
+            if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+                loadingText.textContent = 'Error loading game :(';
+                console.error(error);
+            } else {
+                loadingContainer.classList.add('hidden');
+            }
         }
-    });
+    }
+    loadGame();
 </script>
 </body>
-
 </html>
