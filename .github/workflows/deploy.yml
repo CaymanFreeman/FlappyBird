@@ -22,17 +22,24 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
 
+      - name: Install WASM Bindgen
+        run: cargo install wasm-bindgen-cli
+
       - name: Build
-        run: cargo build --release --target wasm32-unknown-unknown
+        run: |
+          cargo build --release --target wasm32-unknown-unknown
+          wasm-bindgen --no-typescript --target web \
+          --out-dir ./out/ \
+          --out-name "flappy_bird" \
+          ./target/wasm32-unknown-unknown/release/flappy_bird.wasm
 
       - name: Prepare Deployment Directory
         run: |
-          mkdir -p ./deploy
-          cp ./target/wasm32-unknown-unknown/release/flappy_bird.wasm ./deploy/
-          cp index.html ./deploy/
+          cp -r assets ./out/
+          cp index.html ./out/
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy
+          publish_dir: ./out
