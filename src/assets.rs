@@ -8,6 +8,9 @@ pub const SPRITE_SCALE: f32 = 4.0;
 const PIPE_SPRITE: &str = "sprites/pipe.png";
 const PLAYER_SPRITE: &str = "sprites/bird.png";
 
+pub const PLAYER_SPRITE_Z: f32 = 1.0;
+pub const PIPE_SPRITE_Z: f32 = 0.0;
+
 const BACKGROUND_COLOR: [f32; 3] = [0.502, 0.702, 0.8]; // #80b3cc
 
 const FALL_SOUND: &str = "sounds/fall.ogg";

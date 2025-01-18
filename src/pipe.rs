@@ -1,8 +1,8 @@
-use crate::assets::SPRITE_SCALE;
+use crate::assets::{PIPE_SPRITE_Z, SPRITE_SCALE};
 use crate::game::GameManager;
 use bevy::asset::Handle;
 use bevy::image::Image;
-use bevy::math::Vec3;
+use bevy::math::{Vec2, Vec3};
 use bevy::prelude::{Bundle, Commands, Component, Query, Res, Transform};
 use bevy::sprite::Sprite;
 use bevy::time::Time;
@@ -31,17 +31,14 @@ pub struct PipeBundle {
 }
 
 impl PipeBundle {
-    pub fn new(translation: Vec3, direction: f32, pipe_image: &Handle<Image>) -> PipeBundle {
+    pub fn new(translation: Vec2, direction: f32, pipe_image: &Handle<Image>) -> PipeBundle {
         PipeBundle {
             sprite: Sprite {
                 image: pipe_image.clone(),
                 ..Default::default()
             },
-            transform: Transform::from_translation(translation).with_scale(Vec3::new(
-                SPRITE_SCALE,
-                SPRITE_SCALE * -direction,
-                SPRITE_SCALE,
-            )),
+            transform: Transform::from_translation(translation.extend(PIPE_SPRITE_Z))
+                .with_scale(Vec3::new(SPRITE_SCALE, SPRITE_SCALE * -direction, 1.0)),
             pipe: Pipe { direction },
         }
     }
@@ -88,12 +85,12 @@ pub fn spawn_pipes(commands: &mut Commands, window_width: f32, pipe_image: &Hand
         let y_offset = generate_pipe_offset(&mut thread_rng());
         let x_pos = window_width / 2.0 + (PIPE_SPACING * SPRITE_SCALE * i as f32);
         commands.spawn(PipeBundle::new(
-            Vec3::X * x_pos + Vec3::Y * (PIPE_CENTER + y_offset),
+            Vec2::X * x_pos + Vec2::Y * (PIPE_CENTER + y_offset),
             1.0,
             pipe_image,
         ));
         commands.spawn(PipeBundle::new(
-            Vec3::X * x_pos + Vec3::Y * (-PIPE_CENTER + y_offset),
+            Vec2::X * x_pos + Vec2::Y * (-PIPE_CENTER + y_offset),
             -1.0,
             pipe_image,
         ));

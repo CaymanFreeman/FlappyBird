@@ -1,29 +1,52 @@
-use crate::assets::{setup_audio_manager, setup_sprite_manager, SpriteManager};
+use crate::assets::{setup_audio_manager, setup_sprite_manager, AudioManager, SpriteManager};
 use crate::pipe::{spawn_pipes, update_pipe_transform, Pipe};
 use crate::player::{
-    handle_player_collision, handle_player_input, update_player_transform, Player, PlayerBundle,
+    handle_fall_animation, handle_player_collision, handle_player_input, update_player_transform,
+    Player, PlayerBundle, PlayerState, FLAP_FORCE, FLAP_KEY,
 };
 use bevy::app::{App, FixedUpdate, Plugin, PluginGroup, PreStartup, Update};
+use bevy::audio::AudioPlayer;
 use bevy::input::ButtonInput;
 use bevy::math::Vec2;
 use bevy::prelude::{
-    in_state, AppExtStates, Camera2d, Commands, Entity, ImagePlugin, IntoSystemConfigs, KeyCode,
-    NextState, OnEnter, OnExit, Or, Query, Res, ResMut, Resource, State, States, WindowPlugin,
-    With,
+    in_state, AppExtStates, Camera2d, Commands, Component, Entity, ImagePlugin, IntoSystemConfigs,
+    KeyCode, NextState, OnEnter, OnExit, Or, Query, Res, ResMut, Resource, State, States, Time,
+    Timer, TimerMode, WindowPlugin, With, Without,
 };
 use bevy::window::{MonitorSelection, PrimaryWindow, Window, WindowPosition};
 use bevy::DefaultPlugins;
+use std::cmp::PartialEq;
+use std::time::Duration;
 
 const WINDOW_PIXEL_WIDTH: f32 = 512.0;
 const WINDOW_PIXEL_HEIGHT: f32 = 512.0;
 
 const MENU_BUTTON: KeyCode = KeyCode::Escape;
 
+pub const FALL_SOUND_DELAY: f32 = 0.5;
+
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
     #[default]
     Menu,
     Playing,
+}
+
+#[derive(Resource)]
+pub struct GameManager {
+    pub window_dimensions: Vec2,
+}
+
+#[derive(Component)]
+pub struct FallDelayTimer(Timer);
+
+impl FallDelayTimer {
+    pub fn new() -> FallDelayTimer {
+        FallDelayTimer(Timer::new(
+            Duration::from_secs_f32(FALL_SOUND_DELAY),
+            TimerMode::Once,
+        ))
+    }
 }
 
 pub struct GamePlugin;
@@ -56,37 +79,78 @@ impl Plugin for GamePlugin {
             ),
         );
 
+        app.add_systems(
+            Update,
+            update_fall_sound_delay_timer
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::WaitingToFall)),
+        );
+
         app.init_state::<GameState>();
-        app.add_systems(Update, check_menu_toggle);
+        app.add_systems(Update, handle_menu_toggle);
         app.add_systems(OnEnter(GameState::Playing), setup_game);
         app.add_systems(OnExit(GameState::Playing), cleanup_game);
 
+        app.init_state::<PlayerState>();
         app.add_systems(
             Update,
-            handle_player_input.run_if(in_state(GameState::Playing)),
+            handle_frozen_toggle
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::WaitingToStart)),
+        );
+        app.add_systems(
+            Update,
+            handle_fall_animation
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::Falling)),
+        );
+        app.add_systems(
+            Update,
+            handle_player_input
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::Flapping)),
         );
         app.add_systems(
             FixedUpdate,
             (
-                update_player_transform.run_if(in_state(GameState::Playing)),
-                update_pipe_transform.run_if(in_state(GameState::Playing)),
-                handle_player_collision.run_if(in_state(GameState::Playing)),
+                update_player_transform
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Flapping)),
+                update_pipe_transform
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Flapping)),
+                handle_player_collision
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Flapping)),
             )
                 .chain(),
         );
     }
 }
 
-#[derive(Resource)]
-pub struct GameManager {
-    pub window_dimensions: Vec2,
+pub fn update_fall_sound_delay_timer(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut FallDelayTimer)>,
+    audio_manager: Res<AudioManager>,
+    time: Res<Time>,
+    mut next_state: ResMut<NextState<PlayerState>>,
+) {
+    if let Ok((entity, mut delay_timer)) = query.get_single_mut() {
+        if delay_timer.0.tick(time.delta()).just_finished() {
+            next_state.set(PlayerState::Falling);
+            commands.spawn(AudioPlayer::new(audio_manager.fall_sound.clone()));
+            commands.entity(entity).despawn();
+        }
+    }
 }
 
 fn setup_game(
     mut commands: Commands,
     sprite_manager: Res<SpriteManager>,
     window_query: Query<&Window, With<PrimaryWindow>>,
+    mut next_state: ResMut<NextState<PlayerState>>,
 ) {
+    next_state.set(PlayerState::WaitingToStart);
     commands.spawn(PlayerBundle::new(&sprite_manager.player_sprite));
     if let Ok(window) = window_query.get_single() {
         spawn_pipes(&mut commands, window.width(), &sprite_manager.pipe_sprite)
@@ -103,7 +167,7 @@ pub fn setup_game_manager(
     });
 }
 
-fn check_menu_toggle(
+fn handle_menu_toggle(
     game_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -112,6 +176,25 @@ fn check_menu_toggle(
         match game_state.get() {
             GameState::Menu => next_state.set(GameState::Playing),
             GameState::Playing => next_state.set(GameState::Menu),
+        }
+    }
+}
+
+fn handle_frozen_toggle(
+    mut commands: Commands,
+    mut player_query: Query<&mut Player, Without<Pipe>>,
+    player_state: Res<State<PlayerState>>,
+    mut next_state: ResMut<NextState<PlayerState>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    audio_manager: Res<AudioManager>,
+) {
+    if keys.just_pressed(FLAP_KEY) {
+        if let PlayerState::WaitingToStart = player_state.get() {
+            next_state.set(PlayerState::Flapping);
+            commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
+            if let Ok(mut player) = player_query.get_single_mut() {
+                player.velocity = FLAP_FORCE;
+            }
         }
     }
 }
