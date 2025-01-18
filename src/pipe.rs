@@ -47,7 +47,7 @@ impl PipeBundle {
     }
 }
 
-pub fn update_pipes(
+pub fn update_pipe_transform(
     mut pipe_query: Query<(&mut Pipe, &mut Transform)>,
     game_manager: Res<GameManager>,
     time: Res<Time>,

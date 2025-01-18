@@ -1,13 +1,14 @@
-use crate::assets::{AudioManager, SpriteManager, SPRITE_SCALE};
-use crate::game::GameManager;
-use crate::pipe::{spawn_pipes, Pipe, PIPE_HEIGHT, PIPE_WIDTH};
+use crate::assets::{AudioManager, SPRITE_SCALE};
+use crate::game::{GameManager, GameState};
+use crate::pipe::{Pipe, PIPE_HEIGHT, PIPE_WIDTH};
 use bevy::asset::Handle;
 use bevy::audio::AudioPlayer;
 use bevy::image::Image;
 use bevy::input::ButtonInput;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{
-    Bundle, Commands, Component, Entity, KeyCode, Mut, Query, Res, Transform, With, Without,
+    Bundle, Commands, Component, KeyCode, NextState, Query, Res, ResMut, States, Transform, With,
+    Without,
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
@@ -34,6 +35,13 @@ pub struct PlayerBundle {
     transform: Transform,
 }
 
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PlayerState {
+    #[default]
+    Frozen,
+    Flapping,
+}
+
 impl PlayerBundle {
     pub fn new(player_sprite: &Handle<Image>) -> PlayerBundle {
         PlayerBundle {
@@ -47,77 +55,53 @@ impl PlayerBundle {
     }
 }
 
-pub fn update_player(
-    mut commands: Commands,
-    mut player_query: Query<(&mut Player, &mut Transform), Without<Pipe>>,
-    pipe_transform_query: Query<&Transform, With<Pipe>>,
-    mut pipe_entity_query: Query<Entity, With<Pipe>>,
+pub fn update_player_transform(
+    mut player_transform_query: Query<(&mut Player, &mut Transform), Without<Pipe>>,
     time: Res<Time>,
+) {
+    if let Ok((mut player, mut player_transform)) = player_transform_query.get_single_mut() {
+        player.velocity -= time.delta_secs() * GRAVITY_STRENGTH;
+        player_transform.translation.y += player.velocity * time.delta_secs();
+
+        player_transform.rotation = Quat::from_axis_angle(
+            Vec3::Z,
+            f32::clamp(player.velocity / ROTATION_RATIO, -90.0, 90.0).to_radians(),
+        );
+    }
+}
+
+pub fn handle_player_input(
+    mut commands: Commands,
+    mut player_query: Query<&mut Player, Without<Pipe>>,
     keys: Res<ButtonInput<KeyCode>>,
-    game_manager: Res<GameManager>,
-    sprite_manager: Res<SpriteManager>,
     audio_manager: Res<AudioManager>,
 ) {
-    if let Ok((mut player, mut player_transform)) = player_query.get_single_mut() {
-        update_player_movement(
-            &mut commands,
-            keys,
-            &mut player,
-            &mut player_transform,
-            time,
-            &audio_manager,
-        );
-
-        if player_lost(&player_transform, pipe_transform_query, &game_manager) {
-            commands.spawn(AudioPlayer::new(audio_manager.smack_sound.clone()));
-            player_transform.translation = Vec3::ZERO;
-            player.velocity = 0.0;
-            for entity in pipe_entity_query.iter_mut() {
-                commands.entity(entity).despawn();
-            }
-
-            spawn_pipes(
-                &mut commands,
-                game_manager.window_dimensions.x,
-                &sprite_manager.pipe_sprite,
-            );
+    if let Ok(mut player) = player_query.get_single_mut() {
+        if keys.just_pressed(FLAP_KEY) {
+            player.velocity = FLAP_FORCE;
+            commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
         }
     }
 }
 
-fn update_player_movement(
-    commands: &mut Commands,
-    keys: Res<ButtonInput<KeyCode>>,
-    player: &mut Mut<Player>,
-    player_transform: &mut Mut<Transform>,
-    time: Res<Time>,
-    audio_manager: &Res<AudioManager>,
-) {
-    if keys.just_pressed(FLAP_KEY) {
-        player.velocity = FLAP_FORCE;
-        commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
-    }
-
-    player.velocity -= time.delta_secs() * GRAVITY_STRENGTH;
-    player_transform.translation.y += player.velocity * time.delta_secs();
-
-    player_transform.rotation = Quat::from_axis_angle(
-        Vec3::Z,
-        f32::clamp(player.velocity / ROTATION_RATIO, -90.0, 90.0).to_radians(),
-    );
-}
-
-fn player_lost(
-    player_transform: &Mut<Transform>,
+pub fn handle_player_collision(
+    player_transform_query: Query<&Transform, With<Player>>,
     pipe_transform_query: Query<&Transform, With<Pipe>>,
-    game_manager: &Res<GameManager>,
-) -> bool {
-    player_hit_pipe(player_transform, pipe_transform_query)
-        || player_hit_screen(player_transform, game_manager)
+    game_manager: Res<GameManager>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    if let Ok(player_transform) = player_transform_query.get_single() {
+        let player_has_collision = check_pipe_collision(&player_transform, pipe_transform_query)
+            || check_screen_collision(&player_transform, &game_manager);
+
+        if player_has_collision {
+            next_state.set(GameState::Menu);
+        }
+    }
 }
 
-fn player_hit_pipe(
-    player_transform: &Mut<Transform>,
+fn check_pipe_collision(
+    player_transform: &Transform,
     pipe_transform_query: Query<&Transform, With<Pipe>>,
 ) -> bool {
     let player_radius = (PLAYER_WIDTH.min(PLAYER_HEIGHT) * SPRITE_SCALE) * PLAYER_COLLISION_RATIO;
@@ -147,7 +131,7 @@ fn player_hit_pipe(
     false
 }
 
-fn player_hit_screen(player_transform: &Mut<Transform>, game_manager: &Res<GameManager>) -> bool {
+fn check_screen_collision(player_transform: &Transform, game_manager: &Res<GameManager>) -> bool {
     player_transform.translation.y <= -game_manager.window_dimensions.y / 2.0
         || player_transform.translation.y >= game_manager.window_dimensions.y / 2.0
 }
