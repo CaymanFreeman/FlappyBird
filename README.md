@@ -34,7 +34,7 @@ of the game is hosted on this repository's [gh-pages](https://github.com/CaymanF
 
 ## Play
 
-You can play the game [here](https://CaymanFreeman.github.io/FlappyBird).
+You can play the game [here](https://CaymanFreeman.github.io/FlappyBird). It may take a few seconds to download the binary and the page will appear blank while this is happening.
 
 ## Local Build
 
