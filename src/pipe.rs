@@ -1,4 +1,5 @@
-use crate::game::{GameManager, SPRITE_SCALE};
+use crate::assets::SPRITE_SCALE;
+use crate::game::GameManager;
 use bevy::asset::Handle;
 use bevy::image::Image;
 use bevy::math::Vec3;

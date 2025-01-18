@@ -26,7 +26,7 @@
 
 ## Overview
 
-This project is a clone of the original game and is based on a video
+This project is a clone of the original game and is based the assets and core mechanics from a video
 by [Biped Potato](https://www.youtube.com/watch?v=_C28kqin94c). It uses the Bevy ECS (
 Entity-Component System) game engine. Thanks to Bevy and Rust's cross-platform compatibility, the game can be compiled
 for almost any platform, including WebAssembly (WASM), allowing it to be played directly in your browser. A WASM version
@@ -34,7 +34,8 @@ of the game is hosted on this repository's [gh-pages](https://github.com/CaymanF
 
 ## Play
 
-You can play the game [here](https://CaymanFreeman.github.io/FlappyBird). It may take a few seconds to download the binary and the page will appear blank while this is happening.
+You can play the game [here](https://CaymanFreeman.github.io/FlappyBird). It may take a few seconds to download the
+binary and the page will appear blank while this is happening.
 
 ## Local Build
 

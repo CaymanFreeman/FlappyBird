@@ -1,6 +1,8 @@
-use crate::game::{GameManager, SPRITE_SCALE};
+use crate::assets::{AudioManager, SpriteManager, SPRITE_SCALE};
+use crate::game::GameManager;
 use crate::pipe::{spawn_pipes, Pipe, PIPE_HEIGHT, PIPE_WIDTH};
 use bevy::asset::Handle;
+use bevy::audio::AudioPlayer;
 use bevy::image::Image;
 use bevy::input::ButtonInput;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
@@ -27,15 +29,15 @@ pub struct Player {
 #[derive(Bundle)]
 pub struct PlayerBundle {
     player: Player,
-    pub sprite: Sprite,
+    sprite: Sprite,
     transform: Transform,
 }
 
 impl PlayerBundle {
-    pub fn new(player_image: Handle<Image>) -> PlayerBundle {
+    pub fn new(player_sprite: &Handle<Image>) -> PlayerBundle {
         PlayerBundle {
             sprite: Sprite {
-                image: player_image,
+                image: player_sprite.clone(),
                 ..Default::default()
             },
             transform: Transform::IDENTITY.with_scale(Vec3::splat(SPRITE_SCALE)),
@@ -52,10 +54,13 @@ pub fn update_player(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     game_manager: Res<GameManager>,
+    sprite_manager: Res<SpriteManager>,
+    audio_manager: Res<AudioManager>,
 ) {
     if let Ok((mut player, mut player_transform)) = player_query.get_single_mut() {
         if keys.just_pressed(KeyCode::Space) {
             player.velocity = FLAP_FORCE;
+            commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
         }
 
         player.velocity -= time.delta_secs() * GRAVITY_STRENGTH;
@@ -112,7 +117,7 @@ pub fn update_player(
                 &mut commands,
                 &mut rand,
                 game_manager.window_dimensions.x,
-                &game_manager.pipe_image,
+                &sprite_manager.pipe_sprite,
             );
         }
     }
