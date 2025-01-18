@@ -17,27 +17,27 @@ const PLAYER_WIDTH: f32 = 12.0;
 const PLAYER_HEIGHT: f32 = 8.0;
 const PLAYER_COLLISION_RATIO: f32 = 0.3;
 
-pub const FLAP_FORCE: f32 = 500.0;
+pub(crate) const FLAP_FORCE: f32 = 500.0;
 const GRAVITY_STRENGTH: f32 = 1800.0;
 const ANIMATION_GRAVITY_STRENGTH: f32 = 750.0;
 const ROTATION_RATIO: f32 = 13.0;
 
-pub const FLAP_KEY: KeyCode = KeyCode::Space;
+pub(crate) const FLAP_KEY: KeyCode = KeyCode::Space;
 
 #[derive(Component)]
-pub struct Player {
+pub(crate) struct Player {
     pub velocity: f32,
 }
 
 #[derive(Bundle)]
-pub struct PlayerBundle {
+pub(crate) struct PlayerBundle {
     player: Player,
     sprite: Sprite,
     transform: Transform,
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum PlayerState {
+pub(crate) enum PlayerState {
     #[default]
     WaitingToStart,
     WaitingToFall,
@@ -46,7 +46,7 @@ pub enum PlayerState {
 }
 
 impl PlayerBundle {
-    pub fn new(player_sprite: &Handle<Image>) -> PlayerBundle {
+    pub(crate) fn new(player_sprite: &Handle<Image>) -> PlayerBundle {
         PlayerBundle {
             sprite: Sprite {
                 image: player_sprite.clone(),
@@ -62,7 +62,7 @@ impl PlayerBundle {
     }
 }
 
-pub fn update_player_transform(
+pub(crate) fn update_player_transform(
     mut player_transform_query: Query<(&mut Player, &mut Transform)>,
     time: Res<Time>,
 ) {
@@ -72,7 +72,7 @@ pub fn update_player_transform(
     }
 }
 
-fn apply_player_gravity(
+pub(crate) fn apply_player_gravity(
     player: &mut Mut<Player>,
     player_transform: &mut Mut<Transform>,
     time: &Res<Time>,
@@ -81,7 +81,7 @@ fn apply_player_gravity(
     player_transform.translation.y += player.velocity * time.delta_secs();
 }
 
-fn apply_player_animation_gravity(
+pub(crate) fn apply_player_animation_gravity(
     player: &mut Mut<Player>,
     player_transform: &mut Mut<Transform>,
     time: &Res<Time>,
@@ -90,14 +90,17 @@ fn apply_player_animation_gravity(
     player_transform.translation.y += player.velocity * time.delta_secs();
 }
 
-fn apply_player_rotation(player: &mut Mut<Player>, player_transform: &mut Mut<Transform>) {
+pub(crate) fn apply_player_rotation(
+    player: &mut Mut<Player>,
+    player_transform: &mut Mut<Transform>,
+) {
     player_transform.rotation = Quat::from_axis_angle(
         Vec3::Z,
         f32::clamp(player.velocity / ROTATION_RATIO, -90.0, 90.0).to_radians(),
     );
 }
 
-pub fn handle_player_input(
+pub(crate) fn handle_player_input(
     mut commands: Commands,
     mut player_query: Query<&mut Player>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -111,7 +114,7 @@ pub fn handle_player_input(
     }
 }
 
-pub fn handle_player_collision(
+pub(crate) fn handle_player_collision(
     mut commands: Commands,
     player_transform_query: Query<&Transform, With<Player>>,
     pipe_transform_query: Query<&Transform, With<Pipe>>,
@@ -135,7 +138,7 @@ pub fn handle_player_collision(
     }
 }
 
-fn player_pipe_collision(
+pub(crate) fn player_pipe_collision(
     player_transform: &Transform,
     pipe_transform_query: Query<&Transform, With<Pipe>>,
 ) -> bool {
@@ -166,12 +169,15 @@ fn player_pipe_collision(
     false
 }
 
-fn player_screen_collision(player_transform: &Transform, game_manager: &Res<GameManager>) -> bool {
+pub(crate) fn player_screen_collision(
+    player_transform: &Transform,
+    game_manager: &Res<GameManager>,
+) -> bool {
     player_transform.translation.y <= -game_manager.window_dimensions.y / 2.0
         || player_transform.translation.y >= game_manager.window_dimensions.y / 2.0
 }
 
-pub fn handle_fall_animation(
+pub(crate) fn handle_fall_animation(
     mut player_transform_query: Query<(&mut Player, &mut Transform)>,
     time: Res<Time>,
     game_manager: Res<GameManager>,

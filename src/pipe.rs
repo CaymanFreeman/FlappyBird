@@ -10,8 +10,8 @@ use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 
 const PIPE_AMOUNT: i32 = 10;
-pub const PIPE_WIDTH: f32 = 18.0;
-pub const PIPE_HEIGHT: f32 = 144.0;
+pub(crate) const PIPE_WIDTH: f32 = 18.0;
+pub(crate) const PIPE_HEIGHT: f32 = 144.0;
 const PIPE_VERTICAL_OFFSET: f32 = 30.0;
 const PIPE_GAP_SIZE: f32 = 15.0;
 const PIPE_SPACING: f32 = 60.0;
@@ -19,19 +19,19 @@ const PIPE_SPEED: f32 = 150.0;
 const PIPE_CENTER: f32 = (PIPE_HEIGHT / 2.0 + PIPE_GAP_SIZE) * SPRITE_SCALE;
 
 #[derive(Component)]
-pub struct Pipe {
+pub(crate) struct Pipe {
     direction: f32,
 }
 
 #[derive(Bundle)]
-pub struct PipeBundle {
+pub(crate) struct PipeBundle {
     pipe: Pipe,
     sprite: Sprite,
     transform: Transform,
 }
 
 impl PipeBundle {
-    pub fn new(translation: Vec2, direction: f32, pipe_image: &Handle<Image>) -> PipeBundle {
+    pub(crate) fn new(translation: Vec2, direction: f32, pipe_image: &Handle<Image>) -> PipeBundle {
         PipeBundle {
             sprite: Sprite {
                 image: pipe_image.clone(),
@@ -44,7 +44,7 @@ impl PipeBundle {
     }
 }
 
-pub fn update_pipe_transform(
+pub(crate) fn update_pipe_transform(
     mut pipe_query: Query<(&mut Pipe, &mut Transform)>,
     game_manager: Res<GameManager>,
     time: Res<Time>,
@@ -80,7 +80,7 @@ pub fn update_pipe_transform(
     }
 }
 
-pub fn spawn_pipes(commands: &mut Commands, window_width: f32, pipe_image: &Handle<Image>) {
+pub(crate) fn spawn_pipes(commands: &mut Commands, window_width: f32, pipe_image: &Handle<Image>) {
     for i in 0..PIPE_AMOUNT {
         let y_offset = generate_pipe_offset(&mut thread_rng());
         let x_pos = window_width / 2.0 + (PIPE_SPACING * SPRITE_SCALE * i as f32);
@@ -97,6 +97,6 @@ pub fn spawn_pipes(commands: &mut Commands, window_width: f32, pipe_image: &Hand
     }
 }
 
-fn generate_pipe_offset(rand: &mut ThreadRng) -> f32 {
+pub(crate) fn generate_pipe_offset(rand: &mut ThreadRng) -> f32 {
     rand.gen_range(-PIPE_VERTICAL_OFFSET..PIPE_VERTICAL_OFFSET) * SPRITE_SCALE
 }

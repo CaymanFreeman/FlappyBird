@@ -4,12 +4,12 @@ use bevy::color::Color;
 use bevy::image::Image;
 use bevy::prelude::{ClearColor, Commands, Res, Resource};
 
-pub const SPRITE_SCALE: f32 = 4.0;
+pub(crate) const SPRITE_SCALE: f32 = 4.0;
 const PIPE_SPRITE: &str = "sprites/pipe.png";
 const PLAYER_SPRITE: &str = "sprites/bird.png";
 
-pub const PLAYER_SPRITE_Z: f32 = 1.0;
-pub const PIPE_SPRITE_Z: f32 = 0.0;
+pub(crate) const PLAYER_SPRITE_Z: f32 = 1.0;
+pub(crate) const PIPE_SPRITE_Z: f32 = 0.0;
 
 const BACKGROUND_COLOR: [f32; 3] = [0.502, 0.702, 0.8]; // #80b3cc
 
@@ -21,13 +21,13 @@ const SWOOSH_SOUND: &str = "sounds/swoosh.ogg";
 const MUSIC: &str = "sounds/music.ogg";
 
 #[derive(Resource)]
-pub struct SpriteManager {
+pub(crate) struct SpriteManager {
     pub pipe_sprite: Handle<Image>,
     pub player_sprite: Handle<Image>,
 }
 
 #[derive(Resource)]
-pub struct AudioManager {
+pub(crate) struct AudioManager {
     pub fall_sound: Handle<AudioSource>,
     pub flap_sound: Handle<AudioSource>,
     pub score_sound: Handle<AudioSource>,
@@ -36,7 +36,7 @@ pub struct AudioManager {
     pub music: Handle<AudioSource>,
 }
 
-pub fn setup_sprite_manager(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub(crate) fn setup_sprite_manager(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(ClearColor(Color::srgb_from_array(BACKGROUND_COLOR)));
     commands.insert_resource(SpriteManager {
         pipe_sprite: asset_server.load(PIPE_SPRITE),
@@ -44,7 +44,7 @@ pub fn setup_sprite_manager(mut commands: Commands, asset_server: Res<AssetServe
     });
 }
 
-pub fn setup_audio_manager(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub(crate) fn setup_audio_manager(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(AudioManager {
         fall_sound: asset_server.load(FALL_SOUND),
         flap_sound: asset_server.load(FLAP_SOUND),

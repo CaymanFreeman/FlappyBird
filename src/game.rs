@@ -21,12 +21,12 @@ use std::time::Duration;
 const WINDOW_PIXEL_WIDTH: f32 = 512.0;
 const WINDOW_PIXEL_HEIGHT: f32 = 512.0;
 
-const MENU_BUTTON: KeyCode = KeyCode::Escape;
+pub(crate) const MENU_BUTTON: KeyCode = KeyCode::Escape;
 
-pub const FALL_SOUND_DELAY: f32 = 0.5;
+pub(crate) const FALL_SOUND_DELAY: f32 = 0.5;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GameState {
+pub(crate) enum GameState {
     #[default]
     Loading,
     Menu,
@@ -34,15 +34,15 @@ pub enum GameState {
 }
 
 #[derive(Resource)]
-pub struct GameManager {
+pub(crate) struct GameManager {
     pub window_dimensions: Vec2,
 }
 
 #[derive(Component)]
-pub struct FallDelayTimer(Timer);
+pub(crate) struct FallDelayTimer(Timer);
 
 impl FallDelayTimer {
-    pub fn new() -> FallDelayTimer {
+    pub(crate) fn new() -> FallDelayTimer {
         FallDelayTimer(Timer::new(
             Duration::from_secs_f32(FALL_SOUND_DELAY),
             TimerMode::Once,
@@ -139,7 +139,7 @@ impl Plugin for GamePlugin {
     }
 }
 
-pub fn update_fall_sound_delay_timer(
+pub(crate) fn update_fall_sound_delay_timer(
     mut commands: Commands,
     mut query: Query<(Entity, &mut FallDelayTimer)>,
     audio_manager: Res<AudioManager>,
@@ -155,20 +155,23 @@ pub fn update_fall_sound_delay_timer(
     }
 }
 
-fn setup_menu(mut commands: Commands, audio_manager: Res<AudioManager>) {
+pub(crate) fn setup_menu(mut commands: Commands, audio_manager: Res<AudioManager>) {
     commands.spawn((
         AudioPlayer::new(audio_manager.music.clone()),
         PlaybackSettings::LOOP,
     ));
 }
 
-fn despawn_music(mut commands: Commands, despawn_query: Query<Entity, With<AudioPlayer>>) {
+pub(crate) fn despawn_music(
+    mut commands: Commands,
+    despawn_query: Query<Entity, With<AudioPlayer>>,
+) {
     for entity in despawn_query.iter() {
         commands.entity(entity).despawn();
     }
 }
 
-fn setup_game(
+pub(crate) fn setup_game(
     mut commands: Commands,
     sprite_manager: Res<SpriteManager>,
     window_query: Query<&Window, With<PrimaryWindow>>,
@@ -181,7 +184,7 @@ fn setup_game(
     }
 }
 
-fn despawn_player_and_pipes(
+pub(crate) fn despawn_player_and_pipes(
     mut commands: Commands,
     despawn_query: Query<Entity, Or<(With<Player>, With<Pipe>)>>,
 ) {
@@ -190,7 +193,7 @@ fn despawn_player_and_pipes(
     }
 }
 
-pub fn setup_game_manager(
+pub(crate) fn setup_game_manager(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -200,7 +203,7 @@ pub fn setup_game_manager(
     });
 }
 
-fn handle_menu_toggle(
+pub(crate) fn handle_menu_toggle(
     game_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -214,7 +217,7 @@ fn handle_menu_toggle(
     }
 }
 
-fn handle_frozen_toggle(
+pub(crate) fn handle_frozen_toggle(
     mut commands: Commands,
     mut player_query: Query<&mut Player, Without<Pipe>>,
     player_state: Res<State<PlayerState>>,
