@@ -10,19 +10,13 @@
             align-items: center;
             background-color: #37373a;
         }
-
-        link[rel*="icon"] {
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-        }
     </style>
     <title>Flappy Bird</title>
     <link href="../assets/icon.png" rel="icon" sizes="18x18 36x36 72x72 128x128 256x256" type="image/png">
 </head>
 <body>
 <script type="module">
-    import '/restart-audio-context.js'
+    import './restart-audio-context.js'
     import init from './flappy_bird.js'
 
     init().catch((error) => {
