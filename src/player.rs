@@ -7,7 +7,7 @@ use bevy::image::Image;
 use bevy::input::ButtonInput;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{
-    Bundle, Commands, Component, Entity, KeyCode, Query, Res, Transform, With, Without,
+    Bundle, Commands, Component, Entity, KeyCode, Mut, Query, Res, Transform, With, Without,
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
@@ -19,6 +19,8 @@ const PLAYER_COLLISION_RATIO: f32 = 0.3;
 const FLAP_FORCE: f32 = 500.0;
 const GRAVITY_STRENGTH: f32 = 2000.0;
 const ROTATION_RATIO: f32 = 17.0;
+
+const FLAP_KEY: KeyCode = KeyCode::Space;
 
 #[derive(Component)]
 pub struct Player {
@@ -57,58 +59,19 @@ pub fn update_player(
     audio_manager: Res<AudioManager>,
 ) {
     if let Ok((mut player, mut player_transform)) = player_query.get_single_mut() {
-        if keys.just_pressed(KeyCode::Space) {
-            player.velocity = FLAP_FORCE;
-            commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
-        }
-
-        player.velocity -= time.delta_secs() * GRAVITY_STRENGTH;
-        player_transform.translation.y += player.velocity * time.delta_secs();
-
-        player_transform.rotation = Quat::from_axis_angle(
-            Vec3::Z,
-            f32::clamp(player.velocity / ROTATION_RATIO, -90.0, 90.0).to_radians(),
+        update_player_movement(
+            &mut commands,
+            keys,
+            &mut player,
+            &mut player_transform,
+            time,
+            &audio_manager,
         );
 
-        let mut player_lost = false;
-
-        if player_transform.translation.y <= -game_manager.window_dimensions.y / 2.0 {
-            player_lost = true;
-        }
-
-        if !player_lost {
-            let player_radius =
-                (PLAYER_WIDTH.min(PLAYER_HEIGHT) * SPRITE_SCALE) * PLAYER_COLLISION_RATIO;
-            let player_center = player_transform.translation.truncate();
-
-            for pipe_transform in pipe_transform_query.iter() {
-                let pipe_rect = Rect {
-                    min: Vec2::new(
-                        pipe_transform.translation.x - (PIPE_WIDTH * SPRITE_SCALE) / 2.0,
-                        pipe_transform.translation.y - (PIPE_HEIGHT * SPRITE_SCALE) / 2.0,
-                    ),
-                    max: Vec2::new(
-                        pipe_transform.translation.x + (PIPE_WIDTH * SPRITE_SCALE) / 2.0,
-                        pipe_transform.translation.y + (PIPE_HEIGHT * SPRITE_SCALE) / 2.0,
-                    ),
-                };
-
-                let closest = Vec2::new(
-                    player_center.x.clamp(pipe_rect.min.x, pipe_rect.max.x),
-                    player_center.y.clamp(pipe_rect.min.y, pipe_rect.max.y),
-                );
-
-                if player_center.distance(closest) < player_radius {
-                    player_lost = true;
-                    break;
-                }
-            }
-        }
-
-        if player_lost {
+        if player_lost(&player_transform, pipe_transform_query, &game_manager) {
             commands.spawn(AudioPlayer::new(audio_manager.smack_sound.clone()));
             player_transform.translation = Vec3::ZERO;
-            player.velocity = 0.;
+            player.velocity = 0.0;
             for entity in pipe_entity_query.iter_mut() {
                 commands.entity(entity).despawn();
             }
@@ -120,4 +83,71 @@ pub fn update_player(
             );
         }
     }
+}
+
+fn update_player_movement(
+    commands: &mut Commands,
+    keys: Res<ButtonInput<KeyCode>>,
+    player: &mut Mut<Player>,
+    player_transform: &mut Mut<Transform>,
+    time: Res<Time>,
+    audio_manager: &Res<AudioManager>,
+) {
+    if keys.just_pressed(FLAP_KEY) {
+        player.velocity = FLAP_FORCE;
+        commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
+    }
+
+    player.velocity -= time.delta_secs() * GRAVITY_STRENGTH;
+    player_transform.translation.y += player.velocity * time.delta_secs();
+
+    player_transform.rotation = Quat::from_axis_angle(
+        Vec3::Z,
+        f32::clamp(player.velocity / ROTATION_RATIO, -90.0, 90.0).to_radians(),
+    );
+}
+
+fn player_lost(
+    player_transform: &Mut<Transform>,
+    pipe_transform_query: Query<&Transform, With<Pipe>>,
+    game_manager: &Res<GameManager>,
+) -> bool {
+    player_hit_pipe(player_transform, pipe_transform_query)
+        || player_hit_screen(player_transform, game_manager)
+}
+
+fn player_hit_pipe(
+    player_transform: &Mut<Transform>,
+    pipe_transform_query: Query<&Transform, With<Pipe>>,
+) -> bool {
+    let player_radius = (PLAYER_WIDTH.min(PLAYER_HEIGHT) * SPRITE_SCALE) * PLAYER_COLLISION_RATIO;
+    let player_center = player_transform.translation.truncate();
+
+    for pipe_transform in pipe_transform_query.iter() {
+        let pipe_rect = Rect {
+            min: Vec2::new(
+                pipe_transform.translation.x - (PIPE_WIDTH * SPRITE_SCALE) / 2.0,
+                pipe_transform.translation.y - (PIPE_HEIGHT * SPRITE_SCALE) / 2.0,
+            ),
+            max: Vec2::new(
+                pipe_transform.translation.x + (PIPE_WIDTH * SPRITE_SCALE) / 2.0,
+                pipe_transform.translation.y + (PIPE_HEIGHT * SPRITE_SCALE) / 2.0,
+            ),
+        };
+
+        let closest = Vec2::new(
+            player_center.x.clamp(pipe_rect.min.x, pipe_rect.max.x),
+            player_center.y.clamp(pipe_rect.min.y, pipe_rect.max.y),
+        );
+
+        if player_center.distance(closest) < player_radius {
+            return true;
+        }
+    }
+    false
+}
+
+fn player_hit_screen(player_transform: &Mut<Transform>, game_manager: &Res<GameManager>) -> bool {
+    player_transform.translation.y <= -game_manager.window_dimensions.y / 2.0
+        || player_transform.translation.y >= game_manager.window_dimensions.y / 2.0
 }
