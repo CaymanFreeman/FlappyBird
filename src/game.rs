@@ -1,12 +1,16 @@
-use crate::pipe::spawn_pipes;
-use crate::player::Player;
+use crate::pipe::{spawn_pipes, update_pipes};
+use crate::player::{update_player, PlayerBundle};
+use bevy::app::{App, Plugin, PluginGroup, Startup, Update};
 use bevy::asset::{AssetServer, Handle};
 use bevy::color::Color;
 use bevy::image::Image;
-use bevy::math::{Vec2, Vec3};
-use bevy::prelude::{Camera2d, ClearColor, Commands, Query, Res, Resource, Transform, With};
-use bevy::sprite::Sprite;
+use bevy::math::Vec2;
+use bevy::prelude::{
+    Camera2d, ClearColor, Commands, ImagePlugin, MonitorSelection, Query, Res, Resource,
+    WindowPlugin, WindowPosition, With,
+};
 use bevy::window::{PrimaryWindow, Window};
+use bevy::DefaultPlugins;
 use rand::thread_rng;
 
 pub const GAME_NAME: &str = "Flappy Bird";
@@ -16,11 +20,34 @@ pub const GAME_PIXEL_HEIGHT: f32 = 512.0;
 pub const SPRITE_SCALE: f32 = 4.0;
 const PIPE_IMAGE: &str = "pipe.png";
 const PLAYER_IMAGE: &str = "bird.png";
+const BACKGROUND_COLOR: [f32; 3] = [0.5, 0.7, 0.8];
 
 #[derive(Resource)]
 pub struct GameManager {
     pub pipe_image: Handle<Image>,
     pub window_dimensions: Vec2,
+}
+
+pub struct GamePlugin;
+
+impl Plugin for GamePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: String::from(GAME_NAME),
+                        position: WindowPosition::Centered(MonitorSelection::Primary),
+                        resolution: Vec2::new(GAME_PIXEL_WIDTH, GAME_PIXEL_HEIGHT).into(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        );
+        app.add_systems(Startup, setup_game);
+        app.add_systems(Update, (update_player, update_pipes));
+    }
 }
 
 pub fn setup_game(
@@ -36,16 +63,9 @@ pub fn setup_game(
         window_dimensions: Vec2::new(window.width(), window.height()),
     });
 
-    commands.insert_resource(ClearColor(Color::srgb(0.5, 0.7, 0.8)));
+    commands.insert_resource(ClearColor(Color::srgb_from_array(BACKGROUND_COLOR)));
     commands.spawn(Camera2d::default());
-    commands.spawn((
-        Sprite {
-            image: asset_server.load(PLAYER_IMAGE),
-            ..Default::default()
-        },
-        Transform::IDENTITY.with_scale(Vec3::splat(SPRITE_SCALE)),
-        Player { velocity: 0.0 },
-    ));
+    commands.spawn(PlayerBundle::new(asset_server.load(PLAYER_IMAGE)));
 
     let mut rand = thread_rng();
     spawn_pipes(&mut commands, &mut rand, window.width(), &pipe_image)

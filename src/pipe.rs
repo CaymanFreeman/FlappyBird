@@ -2,7 +2,7 @@ use crate::game::{GameManager, SPRITE_SCALE};
 use bevy::asset::Handle;
 use bevy::image::Image;
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Component, Query, Res, Transform};
+use bevy::prelude::{Bundle, Commands, Component, Query, Res, Transform};
 use bevy::sprite::Sprite;
 use bevy::time::Time;
 use rand::rngs::ThreadRng;
@@ -20,6 +20,30 @@ const PIPE_CENTER: f32 = (PIPE_HEIGHT / 2.0 + PIPE_GAP_SIZE) * SPRITE_SCALE;
 #[derive(Component)]
 pub struct Pipe {
     direction: f32,
+}
+
+#[derive(Bundle)]
+pub struct PipeBundle {
+    pipe: Pipe,
+    sprite: Sprite,
+    transform: Transform,
+}
+
+impl PipeBundle {
+    pub fn new(translation: Vec3, direction: f32, pipe_image: &Handle<Image>) -> PipeBundle {
+        PipeBundle {
+            sprite: Sprite {
+                image: pipe_image.clone(),
+                ..Default::default()
+            },
+            transform: Transform::from_translation(translation).with_scale(Vec3::new(
+                SPRITE_SCALE,
+                SPRITE_SCALE * -direction,
+                SPRITE_SCALE,
+            )),
+            pipe: Pipe { direction },
+        }
+    }
 }
 
 pub fn update_pipes(
@@ -58,7 +82,7 @@ pub fn update_pipes(
     }
 }
 
-pub(crate) fn spawn_pipes(
+pub fn spawn_pipes(
     commands: &mut Commands,
     rand: &mut ThreadRng,
     window_width: f32,
@@ -67,39 +91,17 @@ pub(crate) fn spawn_pipes(
     for i in 0..PIPE_AMOUNT {
         let y_offset = generate_pipe_offset(rand);
         let x_pos = window_width / 2.0 + (PIPE_SPACING * SPRITE_SCALE * i as f32);
-        spawn_pipe(
-            commands,
+        commands.spawn(PipeBundle::new(
             Vec3::X * x_pos + Vec3::Y * (PIPE_CENTER + y_offset),
             1.0,
             pipe_image,
-        );
-        spawn_pipe(
-            commands,
+        ));
+        commands.spawn(PipeBundle::new(
             Vec3::X * x_pos + Vec3::Y * (-PIPE_CENTER + y_offset),
             -1.0,
             pipe_image,
-        );
+        ));
     }
-}
-
-fn spawn_pipe(
-    commands: &mut Commands,
-    translation: Vec3,
-    direction: f32,
-    pipe_image: &Handle<Image>,
-) {
-    commands.spawn((
-        Sprite {
-            image: pipe_image.clone(),
-            ..Default::default()
-        },
-        Transform::from_translation(translation).with_scale(Vec3::new(
-            SPRITE_SCALE,
-            SPRITE_SCALE * -direction,
-            SPRITE_SCALE,
-        )),
-        Pipe { direction },
-    ));
 }
 
 fn generate_pipe_offset(rand: &mut ThreadRng) -> f32 {

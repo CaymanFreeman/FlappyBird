@@ -1,8 +1,13 @@
 use crate::game::{GameManager, SPRITE_SCALE};
 use crate::pipe::{spawn_pipes, Pipe, PIPE_HEIGHT, PIPE_WIDTH};
+use bevy::asset::Handle;
+use bevy::image::Image;
 use bevy::input::ButtonInput;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
-use bevy::prelude::{Commands, Component, Entity, KeyCode, Query, Res, Transform, With, Without};
+use bevy::prelude::{
+    Bundle, Commands, Component, Entity, KeyCode, Query, Res, Transform, With, Without,
+};
+use bevy::sprite::Sprite;
 use bevy::time::Time;
 use rand::thread_rng;
 
@@ -17,6 +22,26 @@ const ROTATION_RATIO: f32 = 17.0;
 #[derive(Component)]
 pub struct Player {
     pub velocity: f32,
+}
+
+#[derive(Bundle)]
+pub struct PlayerBundle {
+    player: Player,
+    pub sprite: Sprite,
+    transform: Transform,
+}
+
+impl PlayerBundle {
+    pub fn new(player_image: Handle<Image>) -> PlayerBundle {
+        PlayerBundle {
+            sprite: Sprite {
+                image: player_image,
+                ..Default::default()
+            },
+            transform: Transform::IDENTITY.with_scale(Vec3::splat(SPRITE_SCALE)),
+            player: Player { velocity: 0.0 },
+        }
+    }
 }
 
 pub fn update_player(
