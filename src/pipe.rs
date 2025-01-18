@@ -8,7 +8,7 @@ use bevy::time::Time;
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 
-const PIPE_AMOUNT: i32 = 5;
+const PIPE_AMOUNT: i32 = 10;
 pub const PIPE_WIDTH: f32 = 18.0;
 pub const PIPE_HEIGHT: f32 = 144.0;
 const PIPE_VERTICAL_OFFSET: f32 = 30.0;

@@ -6,16 +6,13 @@ use bevy::color::Color;
 use bevy::image::Image;
 use bevy::math::Vec2;
 use bevy::prelude::{
-    Camera2d, ClearColor, Commands, ImagePlugin, MonitorSelection, Query, Res, Resource,
-    WindowPlugin, WindowPosition, With,
+    Camera2d, ClearColor, Commands, ImagePlugin, Query, Res, Resource, WindowPlugin, With,
 };
 use bevy::window::{PrimaryWindow, Window};
 use bevy::DefaultPlugins;
 use rand::thread_rng;
 
-pub const GAME_NAME: &str = "Flappy Bird";
-pub const GAME_PIXEL_WIDTH: f32 = 512.0;
-pub const GAME_PIXEL_HEIGHT: f32 = 512.0;
+pub const HTML_CANVAS_NAME: &str = "#flappy_bird";
 
 pub const SPRITE_SCALE: f32 = 4.0;
 const PIPE_IMAGE: &str = "pipe.png";
@@ -36,9 +33,7 @@ impl Plugin for GamePlugin {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: String::from(GAME_NAME),
-                        position: WindowPosition::Centered(MonitorSelection::Primary),
-                        resolution: Vec2::new(GAME_PIXEL_WIDTH, GAME_PIXEL_HEIGHT).into(),
+                        canvas: Some(HTML_CANVAS_NAME.into()),
                         ..Default::default()
                     }),
                     ..Default::default()
