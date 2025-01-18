@@ -4,54 +4,11 @@
     <style>
         body {
             margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             height: 100vh;
-            background-color: #37373a;
-            overflow: hidden;
-        }
-
-        #loading-container {
-            position: absolute;
-            background-color: #2a2a2d;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            border-radius: 8px;
-            transition: width 0.3s ease-in-out, height 0.3s ease-in-out;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        #loading-bar {
-            width: 80%;
-            height: 20px;
-            background-color: #1a1a1d;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 20px;
-        }
-
-        #loading-progress {
-            width: 0;
-            height: 100%;
-            background-color: #00a2ed;
-            transition: width 0.3s ease-in-out;
-        }
-
-        #loading-text {
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            margin-bottom: 10px;
-        }
-
-        #flappy_bird {
-            max-width: 100vw;
-            max-height: 100vh;
+            background-color: #37373a;
         }
 
         link[rel*="icon"] {
@@ -61,107 +18,17 @@
         }
     </style>
     <title>Flappy Bird</title>
-    <link rel="icon" type="image/png" href="/assets/icon.png" sizes="18x18 36x36">
+    <link href="assets/icon.png" rel="icon" sizes="18x18 36x36 72x72 128x128 256x256" type="image/png">
 </head>
 <body>
-<div id="loading-container">
-    <div id="loading-text">Loading Game...</div>
-    <div id="loading-bar">
-        <div id="loading-progress"></div>
-    </div>
-</div>
-<canvas id="flappy_bird"></canvas>
-
 <script type="module">
-    const loadingContainer = document.getElementById('loading-container');
-    const loadingProgress = document.getElementById('loading-progress');
-    const loadingText = document.getElementById('loading-text');
-    const canvas = document.getElementById('flappy_bird');
+    import init from './flappy_bird.js'
 
-    function calculateDimensions() {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        let width, height;
-
-        if (isMobile) {
-            width = window.innerWidth;
-            height = window.innerHeight;
-        } else {
-            const margin = 0.1;
-            const maxWidth = window.innerWidth * (1 - 2 * margin);
-            const maxHeight = window.innerHeight * (1 - 2 * margin);
-            const targetRatio = 16 / 9;
-            width = maxWidth;
-            height = width / targetRatio;
-
-            if (height > maxHeight) {
-                height = maxHeight;
-                width = height * targetRatio;
-            }
+    init().catch((error) => {
+        if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+            throw error;
         }
-
-        return {
-            width: Math.round(width),
-            height: Math.round(height)
-        };
-    }
-
-    function resizeElements() {
-        const dimensions = calculateDimensions();
-        canvas.width = dimensions.width;
-        canvas.height = dimensions.height;
-        loadingContainer.style.width = `${dimensions.width}px`;
-        loadingContainer.style.height = `${dimensions.height}px`;
-        const scaleFactor = Math.min(dimensions.width / 960, dimensions.height / 540);
-        loadingText.style.fontSize = `${Math.max(16, Math.round(24 * scaleFactor))}px`;
-        const loadingBarWidth = Math.min(dimensions.width * 0.8, 400); // Cap maximum width
-        document.getElementById('loading-bar').style.width = `${loadingBarWidth}px`;
-    }
-
-    resizeElements();
-
-    window.addEventListener('resize', resizeElements);
-
-    function updateProgress(percent) {
-        const clampedPercent = Math.min(Math.max(percent, 0), 100);
-        loadingProgress.style.width = `${clampedPercent}%`;
-        loadingText.textContent = `Loading Game... ${Math.round(clampedPercent)}%`;
-    }
-
-    async function loadGame() {
-        try {
-            const response = await fetch('flappy_bird_bg.wasm');
-            const contentLength = response.headers.get('content-length');
-
-            if (contentLength === null) {
-                updateProgress(50);
-            } else {
-                const total = parseInt(contentLength, 10);
-                let loaded = 0;
-                const reader = response.body.getReader();
-
-                while (true) {
-                    const {done, value} = await reader.read();
-                    if (done) break;
-                    loaded += value.length;
-                    updateProgress((loaded / total) * 100);
-                }
-            }
-
-            const {default: init} = await import('./flappy_bird.js');
-            await init();
-
-            loadingContainer.classList.add('hidden');
-        } catch (error) {
-            if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
-                loadingText.textContent = 'Error loading game :(';
-                console.error(error);
-            } else {
-                loadingContainer.classList.add('hidden');
-            }
-        }
-    }
-
-    loadGame();
+    });
 </script>
 </body>
 </html>
