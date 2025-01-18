@@ -8,7 +8,7 @@ use bevy::input::ButtonInput;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{
     Bundle, Commands, Component, KeyCode, Mut, NextState, Query, Res, ResMut, States, Transform,
-    With, Without,
+    With,
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
@@ -19,6 +19,7 @@ const PLAYER_COLLISION_RATIO: f32 = 0.3;
 
 pub const FLAP_FORCE: f32 = 500.0;
 const GRAVITY_STRENGTH: f32 = 1800.0;
+const ANIMATION_GRAVITY_STRENGTH: f32 = 750.0;
 const ROTATION_RATIO: f32 = 13.0;
 
 pub const FLAP_KEY: KeyCode = KeyCode::Space;
@@ -80,6 +81,15 @@ fn apply_player_gravity(
     player_transform.translation.y += player.velocity * time.delta_secs();
 }
 
+fn apply_player_animation_gravity(
+    player: &mut Mut<Player>,
+    player_transform: &mut Mut<Transform>,
+    time: &Res<Time>,
+) {
+    player.velocity -= time.delta_secs() * ANIMATION_GRAVITY_STRENGTH;
+    player_transform.translation.y += player.velocity * time.delta_secs();
+}
+
 fn apply_player_rotation(player: &mut Mut<Player>, player_transform: &mut Mut<Transform>) {
     player_transform.rotation = Quat::from_axis_angle(
         Vec3::Z,
@@ -89,7 +99,7 @@ fn apply_player_rotation(player: &mut Mut<Player>, player_transform: &mut Mut<Tr
 
 pub fn handle_player_input(
     mut commands: Commands,
-    mut player_query: Query<&mut Player, Without<Pipe>>,
+    mut player_query: Query<&mut Player>,
     keys: Res<ButtonInput<KeyCode>>,
     audio_manager: Res<AudioManager>,
 ) {
@@ -105,6 +115,7 @@ pub fn handle_player_collision(
     mut commands: Commands,
     player_transform_query: Query<&Transform, With<Player>>,
     pipe_transform_query: Query<&Transform, With<Pipe>>,
+    mut player_query: Query<&mut Player>,
     game_manager: Res<GameManager>,
     audio_manager: Res<AudioManager>,
     mut next_player_state: ResMut<NextState<PlayerState>>,
@@ -114,6 +125,9 @@ pub fn handle_player_collision(
             || player_screen_collision(&player_transform, &game_manager);
 
         if player_has_collision {
+            if let Ok(mut player) = player_query.get_single_mut() {
+                player.velocity = 0.0;
+            }
             commands.spawn(AudioPlayer::new(audio_manager.smack_sound.clone()));
             next_player_state.set(PlayerState::WaitingToFall);
             commands.spawn(FallDelayTimer::new());
@@ -164,7 +178,7 @@ pub fn handle_fall_animation(
     mut next_game_state: ResMut<NextState<GameState>>,
 ) {
     if let Ok((mut player, mut player_transform)) = player_transform_query.get_single_mut() {
-        apply_player_gravity(&mut player, &mut player_transform, &time);
+        apply_player_animation_gravity(&mut player, &mut player_transform, &time);
         apply_player_rotation(&mut player, &mut player_transform);
         if player_screen_collision(&player_transform, &game_manager) {
             next_game_state.set(GameState::Menu);
