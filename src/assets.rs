@@ -1,3 +1,5 @@
+use crate::game::setup_game_manager;
+use bevy::app::{App, Plugin, Startup};
 use bevy::asset::{AssetServer, Handle};
 use bevy::audio::AudioSource;
 use bevy::color::Color;
@@ -34,6 +36,21 @@ pub(crate) struct AudioManager {
     pub smack_sound: Handle<AudioSource>,
     pub swoosh_sound: Handle<AudioSource>,
     pub music: Handle<AudioSource>,
+}
+
+pub(crate) struct GameAssetPlugin;
+
+impl Plugin for GameAssetPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Startup,
+            (
+                setup_game_manager,
+                setup_sprite_manager,
+                setup_audio_manager,
+            ),
+        );
+    }
 }
 
 pub(crate) fn setup_sprite_manager(mut commands: Commands, asset_server: Res<AssetServer>) {

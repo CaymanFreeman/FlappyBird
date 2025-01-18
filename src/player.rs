@@ -1,17 +1,19 @@
 use crate::assets::{AudioManager, PLAYER_SPRITE_Z, SPRITE_SCALE};
-use crate::game::{FallDelayTimer, GameManager, GameState};
+use crate::game::{GameState, WindowManager, FALL_SOUND_DELAY};
 use crate::pipe::{Pipe, PIPE_HEIGHT, PIPE_WIDTH};
+use bevy::app::{App, FixedUpdate, Plugin, Update};
 use bevy::asset::Handle;
 use bevy::audio::AudioPlayer;
 use bevy::image::Image;
 use bevy::input::ButtonInput;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{
-    Bundle, Commands, Component, KeyCode, Mut, NextState, Query, Res, ResMut, States, Transform,
-    With,
+    in_state, AppExtStates, Bundle, Commands, Component, Entity, IntoSystemConfigs, KeyCode, Mut,
+    NextState, Query, Res, ResMut, State, States, Timer, TimerMode, Transform, With, Without,
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
+use std::time::Duration;
 
 const PLAYER_WIDTH: f32 = 12.0;
 const PLAYER_HEIGHT: f32 = 8.0;
@@ -29,13 +31,6 @@ pub(crate) struct Player {
     pub velocity: f32,
 }
 
-#[derive(Bundle)]
-pub(crate) struct PlayerBundle {
-    player: Player,
-    sprite: Sprite,
-    transform: Transform,
-}
-
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum PlayerState {
     #[default]
@@ -43,6 +38,13 @@ pub(crate) enum PlayerState {
     WaitingToFall,
     Falling,
     Flapping,
+}
+
+#[derive(Bundle)]
+pub(crate) struct PlayerBundle {
+    player: Player,
+    sprite: Sprite,
+    transform: Transform,
 }
 
 impl PlayerBundle {
@@ -59,6 +61,62 @@ impl PlayerBundle {
             )),
             player: Player { velocity: 0.0 },
         }
+    }
+}
+
+#[derive(Component)]
+pub(crate) struct FallDelayTimer(Timer);
+
+impl FallDelayTimer {
+    pub(crate) fn new() -> FallDelayTimer {
+        FallDelayTimer(Timer::new(
+            Duration::from_secs_f32(FALL_SOUND_DELAY),
+            TimerMode::Once,
+        ))
+    }
+}
+
+pub(crate) struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_state::<PlayerState>();
+        app.add_systems(
+            Update,
+            handle_frozen_toggle
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::WaitingToStart)),
+        );
+        app.add_systems(
+            Update,
+            handle_fall_animation
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::Falling)),
+        );
+        app.add_systems(
+            Update,
+            update_fall_sound_delay_timer
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::WaitingToFall)),
+        );
+        app.add_systems(
+            Update,
+            handle_player_input
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::Flapping)),
+        );
+        app.add_systems(
+            FixedUpdate,
+            (
+                update_player_transform
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Flapping)),
+                handle_player_collision
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Flapping)),
+            )
+                .chain(),
+        );
     }
 }
 
@@ -119,7 +177,7 @@ pub(crate) fn handle_player_collision(
     player_transform_query: Query<&Transform, With<Player>>,
     pipe_transform_query: Query<&Transform, With<Pipe>>,
     mut player_query: Query<&mut Player>,
-    game_manager: Res<GameManager>,
+    game_manager: Res<WindowManager>,
     audio_manager: Res<AudioManager>,
     mut next_player_state: ResMut<NextState<PlayerState>>,
 ) {
@@ -171,16 +229,51 @@ pub(crate) fn player_pipe_collision(
 
 pub(crate) fn player_screen_collision(
     player_transform: &Transform,
-    game_manager: &Res<GameManager>,
+    game_manager: &Res<WindowManager>,
 ) -> bool {
     player_transform.translation.y <= -game_manager.window_dimensions.y / 2.0
         || player_transform.translation.y >= game_manager.window_dimensions.y / 2.0
 }
 
+pub(crate) fn update_fall_sound_delay_timer(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut FallDelayTimer)>,
+    audio_manager: Res<AudioManager>,
+    time: Res<Time>,
+    mut next_state: ResMut<NextState<PlayerState>>,
+) {
+    if let Ok((entity, mut delay_timer)) = query.get_single_mut() {
+        if delay_timer.0.tick(time.delta()).just_finished() {
+            next_state.set(PlayerState::Falling);
+            commands.spawn(AudioPlayer::new(audio_manager.fall_sound.clone()));
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
+pub(crate) fn handle_frozen_toggle(
+    mut commands: Commands,
+    mut player_query: Query<&mut Player, Without<Pipe>>,
+    player_state: Res<State<PlayerState>>,
+    mut next_state: ResMut<NextState<PlayerState>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    audio_manager: Res<AudioManager>,
+) {
+    if keys.just_pressed(FLAP_KEY) {
+        if let PlayerState::WaitingToStart = player_state.get() {
+            next_state.set(PlayerState::Flapping);
+            commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
+            if let Ok(mut player) = player_query.get_single_mut() {
+                player.velocity = FLAP_FORCE;
+            }
+        }
+    }
+}
+
 pub(crate) fn handle_fall_animation(
     mut player_transform_query: Query<(&mut Player, &mut Transform)>,
     time: Res<Time>,
-    game_manager: Res<GameManager>,
+    game_manager: Res<WindowManager>,
     mut next_game_state: ResMut<NextState<GameState>>,
 ) {
     if let Ok((mut player, mut player_transform)) = player_transform_query.get_single_mut() {

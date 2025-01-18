@@ -1,9 +1,13 @@
 use crate::assets::{PIPE_SPRITE_Z, SPRITE_SCALE};
-use crate::game::GameManager;
+use crate::game::{GameState, WindowManager};
+use crate::player::PlayerState;
+use bevy::app::{App, FixedUpdate, Plugin};
 use bevy::asset::Handle;
 use bevy::image::Image;
 use bevy::math::{Vec2, Vec3};
-use bevy::prelude::{Bundle, Commands, Component, Query, Res, Transform};
+use bevy::prelude::{
+    in_state, Bundle, Commands, Component, IntoSystemConfigs, Query, Res, Transform,
+};
 use bevy::sprite::Sprite;
 use bevy::time::Time;
 use rand::rngs::ThreadRng;
@@ -44,9 +48,22 @@ impl PipeBundle {
     }
 }
 
+pub(crate) struct PipePlugin;
+
+impl Plugin for PipePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            FixedUpdate,
+            update_pipe_transform
+                .run_if(in_state(GameState::Playing))
+                .run_if(in_state(PlayerState::Flapping)),
+        );
+    }
+}
+
 pub(crate) fn update_pipe_transform(
     mut pipe_query: Query<(&mut Pipe, &mut Transform)>,
-    game_manager: Res<GameManager>,
+    game_manager: Res<WindowManager>,
     time: Res<Time>,
 ) {
     let mut pipes_to_reset = Vec::new();
