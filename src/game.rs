@@ -4,8 +4,8 @@ use crate::player::{
     handle_fall_animation, handle_player_collision, handle_player_input, update_player_transform,
     Player, PlayerBundle, PlayerState, FLAP_FORCE, FLAP_KEY,
 };
-use bevy::app::{App, FixedUpdate, Plugin, PluginGroup, PreStartup, Update};
-use bevy::audio::AudioPlayer;
+use bevy::app::{App, FixedUpdate, Plugin, PluginGroup, PostStartup, Startup, Update};
+use bevy::audio::{AudioPlayer, PlaybackSettings};
 use bevy::input::ButtonInput;
 use bevy::math::Vec2;
 use bevy::prelude::{
@@ -28,6 +28,7 @@ pub const FALL_SOUND_DELAY: f32 = 0.5;
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
     #[default]
+    Loading,
     Menu,
     Playing,
 }
@@ -67,8 +68,11 @@ impl Plugin for GamePlugin {
                 .set(ImagePlugin::default_nearest()),
         );
 
+        app.init_state::<GameState>();
+        app.init_state::<PlayerState>();
+
         app.add_systems(
-            PreStartup,
+            Startup,
             (
                 setup_game_manager,
                 setup_sprite_manager,
@@ -80,18 +84,25 @@ impl Plugin for GamePlugin {
         );
 
         app.add_systems(
+            PostStartup,
+            |mut next_game_state: ResMut<NextState<GameState>>| {
+                next_game_state.set(GameState::Menu);
+            },
+        );
+
+        app.add_systems(
             Update,
             update_fall_sound_delay_timer
                 .run_if(in_state(GameState::Playing))
                 .run_if(in_state(PlayerState::WaitingToFall)),
         );
 
-        app.init_state::<GameState>();
         app.add_systems(Update, handle_menu_toggle);
+        app.add_systems(OnEnter(GameState::Menu), setup_menu);
         app.add_systems(OnEnter(GameState::Playing), setup_game);
-        app.add_systems(OnExit(GameState::Playing), cleanup_game);
+        app.add_systems(OnExit(GameState::Menu), despawn_music);
+        app.add_systems(OnExit(GameState::Playing), despawn_player_and_pipes);
 
-        app.init_state::<PlayerState>();
         app.add_systems(
             Update,
             handle_frozen_toggle
@@ -144,6 +155,19 @@ pub fn update_fall_sound_delay_timer(
     }
 }
 
+fn setup_menu(mut commands: Commands, audio_manager: Res<AudioManager>) {
+    commands.spawn((
+        AudioPlayer::new(audio_manager.music.clone()),
+        PlaybackSettings::LOOP,
+    ));
+}
+
+fn despawn_music(mut commands: Commands, despawn_query: Query<Entity, With<AudioPlayer>>) {
+    for entity in despawn_query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
 fn setup_game(
     mut commands: Commands,
     sprite_manager: Res<SpriteManager>,
@@ -154,6 +178,15 @@ fn setup_game(
     commands.spawn(PlayerBundle::new(&sprite_manager.player_sprite));
     if let Ok(window) = window_query.get_single() {
         spawn_pipes(&mut commands, window.width(), &sprite_manager.pipe_sprite)
+    }
+}
+
+fn despawn_player_and_pipes(
+    mut commands: Commands,
+    despawn_query: Query<Entity, Or<(With<Player>, With<Pipe>)>>,
+) {
+    for entity in despawn_query.iter() {
+        commands.entity(entity).despawn();
     }
 }
 
@@ -176,6 +209,7 @@ fn handle_menu_toggle(
         match game_state.get() {
             GameState::Menu => next_state.set(GameState::Playing),
             GameState::Playing => next_state.set(GameState::Menu),
+            _ => (),
         }
     }
 }
@@ -196,11 +230,5 @@ fn handle_frozen_toggle(
                 player.velocity = FLAP_FORCE;
             }
         }
-    }
-}
-
-fn cleanup_game(mut commands: Commands, query: Query<Entity, Or<(With<Player>, With<Pipe>)>>) {
-    for entity in query.iter() {
-        commands.entity(entity).despawn();
     }
 }

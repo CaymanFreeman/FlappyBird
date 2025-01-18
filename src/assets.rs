@@ -18,6 +18,7 @@ const FLAP_SOUND: &str = "sounds/flap.ogg";
 const SCORE_SOUND: &str = "sounds/score.ogg";
 const SMACK_SOUND: &str = "sounds/smack.ogg";
 const SWOOSH_SOUND: &str = "sounds/swoosh.ogg";
+const MUSIC: &str = "sounds/music.ogg";
 
 #[derive(Resource)]
 pub struct SpriteManager {
@@ -32,6 +33,7 @@ pub struct AudioManager {
     pub score_sound: Handle<AudioSource>,
     pub smack_sound: Handle<AudioSource>,
     pub swoosh_sound: Handle<AudioSource>,
+    pub music: Handle<AudioSource>,
 }
 
 pub fn setup_sprite_manager(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -49,5 +51,6 @@ pub fn setup_audio_manager(mut commands: Commands, asset_server: Res<AssetServer
         score_sound: asset_server.load(SCORE_SOUND),
         smack_sound: asset_server.load(SMACK_SOUND),
         swoosh_sound: asset_server.load(SWOOSH_SOUND),
+        music: asset_server.load(MUSIC),
     });
 }
