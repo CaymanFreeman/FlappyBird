@@ -26,7 +26,7 @@
 
 ## Overview
 
-This project is a clone of the original game and is based on a tutorial
+This project is a clone of the original game and is based on a video
 by [Biped Potato](https://www.youtube.com/watch?v=_C28kqin94c). It uses the Bevy ECS (
 Entity-Component System) game engine. Thanks to Bevy and Rust's cross-platform compatibility, the game can be compiled
 for almost any platform, including WebAssembly (WASM), allowing it to be played directly in your browser. A WASM version
