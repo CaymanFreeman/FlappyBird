@@ -11,7 +11,6 @@ use bevy::prelude::{
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
-use rand::thread_rng;
 
 const PLAYER_WIDTH: f32 = 12.0;
 const PLAYER_HEIGHT: f32 = 8.0;
@@ -113,10 +112,9 @@ pub fn update_player(
             for entity in pipe_entity_query.iter_mut() {
                 commands.entity(entity).despawn();
             }
-            let mut rand = thread_rng();
+
             spawn_pipes(
                 &mut commands,
-                &mut rand,
                 game_manager.window_dimensions.x,
                 &sprite_manager.pipe_sprite,
             );

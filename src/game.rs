@@ -8,7 +8,6 @@ use bevy::prelude::{
 };
 use bevy::window::{MonitorSelection, PrimaryWindow, Window, WindowPosition};
 use bevy::DefaultPlugins;
-use rand::thread_rng;
 
 const WINDOW_PIXEL_WIDTH: f32 = 512.0;
 const WINDOW_PIXEL_HEIGHT: f32 = 512.0;
@@ -58,13 +57,7 @@ fn setup_game(
     commands.spawn(Camera2d::default());
     commands.spawn(PlayerBundle::new(&sprite_manager.player_sprite));
 
-    let mut rand = thread_rng();
-    spawn_pipes(
-        &mut commands,
-        &mut rand,
-        window.width(),
-        &sprite_manager.pipe_sprite,
-    )
+    spawn_pipes(&mut commands, window.width(), &sprite_manager.pipe_sprite)
 }
 
 pub fn setup_game_manager(

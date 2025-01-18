@@ -83,14 +83,9 @@ pub fn update_pipes(
     }
 }
 
-pub fn spawn_pipes(
-    commands: &mut Commands,
-    rand: &mut ThreadRng,
-    window_width: f32,
-    pipe_image: &Handle<Image>,
-) {
+pub fn spawn_pipes(commands: &mut Commands, window_width: f32, pipe_image: &Handle<Image>) {
     for i in 0..PIPE_AMOUNT {
-        let y_offset = generate_pipe_offset(rand);
+        let y_offset = generate_pipe_offset(&mut thread_rng());
         let x_pos = window_width / 2.0 + (PIPE_SPACING * SPRITE_SCALE * i as f32);
         commands.spawn(PipeBundle::new(
             Vec3::X * x_pos + Vec3::Y * (PIPE_CENTER + y_offset),
