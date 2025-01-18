@@ -107,6 +107,7 @@ pub fn update_player(
         }
 
         if player_lost {
+            commands.spawn(AudioPlayer::new(audio_manager.smack_sound.clone()));
             player_transform.translation = Vec3::ZERO;
             player.velocity = 0.;
             for entity in pipe_entity_query.iter_mut() {
