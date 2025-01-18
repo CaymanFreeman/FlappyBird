@@ -24,18 +24,24 @@
   <a href="https://www.linkedin.com/in/caymanfreeman/"><img alt="linkedin" src="https://img.shields.io/badge/linkedin-Connect_with_me-%230072b1?style=flat"></a>
 </p>
 
+## Play
+
+You can play the game [here](https://CaymanFreeman.github.io/FlappyBird). It may take a few seconds to download the
+binary and the page will appear blank while this is happening.
+
 ## Overview
 
-This project is a clone of the original game and is based the assets and core mechanics from a video
+This project is a clone of the original game and is based the core mechanics from a video
 by [Biped Potato](https://www.youtube.com/watch?v=_C28kqin94c). It uses the Bevy ECS (
 Entity-Component System) game engine. Thanks to Bevy and Rust's cross-platform compatibility, the game can be compiled
 for almost any platform, including WebAssembly (WASM), allowing it to be played directly in your browser. A WASM version
 of the game is hosted on this repository's [gh-pages](https://github.com/CaymanFreeman/FlappyBird/tree/gh-pages) branch.
 
-## Play
+## Attributions
 
-You can play the game [here](https://CaymanFreeman.github.io/FlappyBird). It may take a few seconds to download the
-binary and the page will appear blank while this is happening.
+- Sprites from [Biped Potato](https://www.youtube.com/watch?v=_C28kqin94c)
+- Sound effects from [samuelcust](https://github.com/samuelcust/flappy-bird-assets/tree/master/audio)
+- Music by [ben_burnes](https://tallbeard.itch.io/music-loop-bundle)
 
 ## Local Build
 
