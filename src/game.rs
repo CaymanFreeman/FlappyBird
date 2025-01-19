@@ -1,9 +1,9 @@
-use crate::assets::{GameAssetPlugin, SpriteManager};
+use crate::assets::{AudioManager, GameAssetsPlugin, SpriteManager, SWOOSH_SOUND_VOLUME};
 use crate::menu::MenuPlugin;
 use crate::pipe::{spawn_pipes, Pipe, PipePlugin};
 use crate::player::{Player, PlayerBundle, PlayerPlugin, PlayerState, Score};
 use bevy::app::{App, Plugin, PluginGroup, Startup};
-use bevy::audio::AudioPlayer;
+use bevy::audio::{AudioPlayer, PlaybackSettings, Volume};
 use bevy::math::Vec2;
 use bevy::prelude::{
     AppExtStates, Camera2d, Commands, Entity, ImagePlugin, NextState, OnEnter, Or, Query, Res,
@@ -20,7 +20,7 @@ const WINDOW_PIXEL_HEIGHT: f32 = 512.0;
 pub(crate) enum GameState {
     #[default]
     Loading,
-    Menu,
+    MainMenu,
     Playing,
 }
 
@@ -57,7 +57,7 @@ impl Plugin for GamePlugin {
         app.init_state::<GameState>();
         app.add_systems(OnEnter(GameState::Playing), (setup_game, despawn_music));
 
-        app.add_plugins((PlayerPlugin, PipePlugin, MenuPlugin, GameAssetPlugin));
+        app.add_plugins((PlayerPlugin, PipePlugin, MenuPlugin, GameAssetsPlugin));
     }
 }
 
@@ -73,12 +73,20 @@ pub(crate) fn despawn_music(
 pub(crate) fn setup_game(
     mut commands: Commands,
     sprite_manager: Res<SpriteManager>,
+    audio_manager: Res<AudioManager>,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    mut next_state: ResMut<NextState<PlayerState>>,
+    mut next_player_state: ResMut<NextState<PlayerState>>,
     mut score: ResMut<Score>,
 ) {
     score.0 = 1;
-    next_state.set(PlayerState::WaitingToStart);
+    next_player_state.set(PlayerState::WaitingToStart);
+    commands.spawn((
+        AudioPlayer::new(audio_manager.swoosh_sound.clone()),
+        PlaybackSettings {
+            volume: Volume::new(SWOOSH_SOUND_VOLUME),
+            ..Default::default()
+        },
+    ));
     commands.spawn(PlayerBundle::new(&sprite_manager.player_sprite));
     if let Ok(window) = window_query.get_single() {
         spawn_pipes(&mut commands, window.width(), &sprite_manager.pipe_sprite)

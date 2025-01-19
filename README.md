@@ -31,7 +31,7 @@ binary and the page will appear blank while this is happening.
 
 ## Overview
 
-This project is a clone of the original game and is based the core mechanics from a video
+This project is a clone of the original game and is based the core movement mechanics from a video
 by [Biped Potato](https://www.youtube.com/watch?v=_C28kqin94c). It uses the Bevy ECS (
 Entity-Component System) game engine. Thanks to Bevy and Rust's cross-platform compatibility, the game can be compiled
 for almost any platform, including WebAssembly (WASM), allowing it to be played directly in your browser. A WASM version
@@ -42,6 +42,9 @@ of the game is hosted on this repository's [gh-pages](https://github.com/CaymanF
 - Sprites from [Biped Potato](https://www.youtube.com/watch?v=_C28kqin94c)
 - Sound effects from [samuelcust](https://github.com/samuelcust/flappy-bird-assets/tree/master/audio)
 - Music by [ben_burnes](https://tallbeard.itch.io/music-loop-bundle)
+- Title Font ([Light Pixel-7](https://www.1001fonts.com/light-pixel-7-font.html)) and Button
+  Font ([Mini Pixel-7](https://www.1001fonts.com/mini-pixel-7-font.html)) by
+  Sizenko Alexander
 
 ## Local Build
 
