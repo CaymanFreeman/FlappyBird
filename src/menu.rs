@@ -1,16 +1,20 @@
 use crate::assets::AudioManager;
-use crate::game::{despawn_music, GameState, MENU_BUTTON};
+use crate::game::{despawn_player_and_pipes, GameState};
 use bevy::app::{App, Plugin, PostStartup, Update};
 use bevy::audio::{AudioPlayer, PlaybackSettings};
 use bevy::input::ButtonInput;
-use bevy::prelude::{Commands, KeyCode, NextState, OnEnter, OnExit, Res, ResMut, State};
+use bevy::prelude::{Commands, KeyCode, NextState, OnEnter, Res, ResMut, State};
+
+pub(crate) const MENU_BUTTON: KeyCode = KeyCode::Escape;
 
 pub(crate) struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Menu), setup_menu);
-        app.add_systems(OnExit(GameState::Menu), despawn_music);
+        app.add_systems(
+            OnEnter(GameState::Menu),
+            (setup_menu, despawn_player_and_pipes),
+        );
         app.add_systems(Update, handle_menu_toggle);
         app.add_systems(
             PostStartup,

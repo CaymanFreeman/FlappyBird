@@ -1,5 +1,5 @@
 use crate::assets::{AudioManager, PLAYER_SPRITE_Z, SPRITE_SCALE};
-use crate::game::{GameState, WindowManager, FALL_SOUND_DELAY};
+use crate::game::{GameState, WindowManager};
 use crate::pipe::{
     Pipe, ScoreZone, PIPE_GAP_SIZE, PIPE_HALF_HEIGHT, PIPE_HALF_WIDTH, SCORE_ZONE_WIDTH,
 };
@@ -28,6 +28,9 @@ const ANIMATION_GRAVITY_STRENGTH: f32 = 750.0;
 const ROTATION_RATIO: f32 = 13.0;
 
 pub(crate) const FLAP_KEY: KeyCode = KeyCode::Space;
+
+const FALL_SOUND_DELAY: f32 = 0.5;
+const FALL_RESET_DELAY: f32 = 1.75;
 
 #[derive(Component)]
 pub(crate) struct Player {
@@ -82,6 +85,18 @@ impl FallDelayTimer {
     }
 }
 
+#[derive(Component)]
+pub(crate) struct ResetDelayTimer(Timer);
+
+impl ResetDelayTimer {
+    pub(crate) fn new() -> ResetDelayTimer {
+        ResetDelayTimer(Timer::new(
+            Duration::from_secs_f32(FALL_RESET_DELAY),
+            TimerMode::Once,
+        ))
+    }
+}
+
 pub(crate) struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -104,15 +119,17 @@ impl Plugin for PlayerPlugin {
         );
         app.add_systems(
             Update,
-            update_fall_sound_delay_timer
-                .run_if(in_state(GameState::Playing))
-                .run_if(in_state(PlayerState::WaitingToFall)),
-        );
-        app.add_systems(
-            Update,
-            handle_player_input
-                .run_if(in_state(GameState::Playing))
-                .run_if(in_state(PlayerState::Flapping)),
+            (
+                update_fall_sound_delay_timer
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::WaitingToFall)),
+                handle_player_input
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Flapping)),
+                update_fall_reset_delay_timer
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Falling)),
+            ),
         );
         app.add_systems(
             FixedUpdate,
@@ -285,13 +302,28 @@ pub(crate) fn update_fall_sound_delay_timer(
     mut query: Query<(Entity, &mut FallDelayTimer)>,
     audio_manager: Res<AudioManager>,
     time: Res<Time>,
-    mut next_state: ResMut<NextState<PlayerState>>,
+    mut next_player_state: ResMut<NextState<PlayerState>>,
 ) {
     if let Ok((entity, mut delay_timer)) = query.get_single_mut() {
         if delay_timer.0.tick(time.delta()).just_finished() {
-            next_state.set(PlayerState::Falling);
+            next_player_state.set(PlayerState::Falling);
+            commands.spawn(ResetDelayTimer::new());
             commands.spawn(AudioPlayer::new(audio_manager.fall_sound.clone()));
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+pub(crate) fn update_fall_reset_delay_timer(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut ResetDelayTimer)>,
+    time: Res<Time>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+) {
+    if let Ok((entity, mut delay_timer)) = query.get_single_mut() {
+        if delay_timer.0.tick(time.delta()).just_finished() {
+            commands.entity(entity).despawn();
+            next_game_state.set(GameState::Menu);
         }
     }
 }
@@ -300,13 +332,13 @@ pub(crate) fn handle_frozen_toggle(
     mut commands: Commands,
     mut player_query: Query<&mut Player, Without<Pipe>>,
     player_state: Res<State<PlayerState>>,
-    mut next_state: ResMut<NextState<PlayerState>>,
+    mut next_player_state: ResMut<NextState<PlayerState>>,
     keys: Res<ButtonInput<KeyCode>>,
     audio_manager: Res<AudioManager>,
 ) {
     if keys.just_pressed(FLAP_KEY) {
         if let PlayerState::WaitingToStart = player_state.get() {
-            next_state.set(PlayerState::Flapping);
+            next_player_state.set(PlayerState::Flapping);
             commands.spawn(AudioPlayer::new(audio_manager.flap_sound.clone()));
             if let Ok(mut player) = player_query.get_single_mut() {
                 player.velocity = FLAP_FORCE;
@@ -318,14 +350,9 @@ pub(crate) fn handle_frozen_toggle(
 pub(crate) fn handle_fall_animation(
     mut player_transform_query: Query<(&mut Player, &mut Transform)>,
     time: Res<Time>,
-    game_manager: Res<WindowManager>,
-    mut next_game_state: ResMut<NextState<GameState>>,
 ) {
     if let Ok((mut player, mut player_transform)) = player_transform_query.get_single_mut() {
         apply_player_animation_gravity(&mut player, &mut player_transform, &time);
         apply_player_rotation(&mut player, &mut player_transform);
-        if player_screen_collision(&player_transform, &game_manager) {
-            next_game_state.set(GameState::Menu);
-        }
     }
 }

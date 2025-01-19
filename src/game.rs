@@ -6,8 +6,8 @@ use bevy::app::{App, Plugin, PluginGroup, Startup};
 use bevy::audio::AudioPlayer;
 use bevy::math::Vec2;
 use bevy::prelude::{
-    AppExtStates, Camera2d, Commands, Entity, ImagePlugin, KeyCode, NextState, OnEnter, OnExit, Or,
-    Query, Res, ResMut, Resource, States, WindowPlugin, With,
+    AppExtStates, Camera2d, Commands, Entity, ImagePlugin, NextState, OnEnter, Or, Query, Res,
+    ResMut, Resource, States, WindowPlugin, With,
 };
 use bevy::window::{MonitorSelection, PrimaryWindow, Window, WindowPosition};
 use bevy::DefaultPlugins;
@@ -15,10 +15,6 @@ use std::cmp::PartialEq;
 
 const WINDOW_PIXEL_WIDTH: f32 = 512.0;
 const WINDOW_PIXEL_HEIGHT: f32 = 512.0;
-
-pub(crate) const MENU_BUTTON: KeyCode = KeyCode::Escape;
-
-pub(crate) const FALL_SOUND_DELAY: f32 = 0.5;
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum GameState {
@@ -59,8 +55,7 @@ impl Plugin for GamePlugin {
         );
 
         app.init_state::<GameState>();
-        app.add_systems(OnEnter(GameState::Playing), setup_game);
-        app.add_systems(OnExit(GameState::Playing), despawn_player_and_pipes);
+        app.add_systems(OnEnter(GameState::Playing), (setup_game, despawn_music));
 
         app.add_plugins((PlayerPlugin, PipePlugin, MenuPlugin, GameAssetPlugin));
     }
