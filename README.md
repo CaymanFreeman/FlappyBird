@@ -42,8 +42,8 @@ of the game is hosted on this repository's [gh-pages](https://github.com/CaymanF
 - Sprites from [Biped Potato](https://www.youtube.com/watch?v=_C28kqin94c)
 - Sound effects from [samuelcust](https://github.com/samuelcust/flappy-bird-assets/tree/master/audio)
 - Music by [ben_burnes](https://tallbeard.itch.io/music-loop-bundle)
-- Title Font ([Light Pixel-7](https://www.1001fonts.com/light-pixel-7-font.html)) and Button
-  Font ([Mini Pixel-7](https://www.1001fonts.com/mini-pixel-7-font.html)) by
+- Title and score font, [Light Pixel-7](https://www.1001fonts.com/light-pixel-7-font.html), and button
+  font, [Mini Pixel-7](https://www.1001fonts.com/mini-pixel-7-font.html), by
   Sizenko Alexander
 
 ## Local Build

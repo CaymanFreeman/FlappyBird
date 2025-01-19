@@ -17,7 +17,7 @@ const PLAYER_SPRITE: &str = "sprites/bird.png";
 pub(crate) const PLAYER_SPRITE_Z: f32 = 1.0;
 pub(crate) const PIPE_SPRITE_Z: f32 = 0.0;
 
-pub(crate) const GAME_BACKGROUND_COLOR: [f32; 3] = [0.502, 0.702, 0.8]; // #80b3cc
+pub(crate) const GAME_BACKGROUND_COLOR: [f32; 3] = [0.565, 0.855, 1.0]; // #90daff
 
 pub(crate) const FALL_SOUND: &str = "sounds/fall.ogg";
 pub(crate) const FLAP_SOUND: &str = "sounds/flap.ogg";

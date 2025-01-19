@@ -1,5 +1,5 @@
 use crate::assets::{AudioManager, GameAssetsPlugin, SpriteManager, SWOOSH_SOUND_VOLUME};
-use crate::menu::MenuPlugin;
+use crate::menu::{MenuPlugin, MenuSystems};
 use crate::pipe::{spawn_pipes, Pipe, PipePlugin};
 use crate::player::{Player, PlayerBundle, PlayerPlugin, PlayerState, Score};
 use bevy::app::{App, Plugin, PluginGroup, Startup};
@@ -74,11 +74,13 @@ pub(crate) fn setup_game(
     mut commands: Commands,
     sprite_manager: Res<SpriteManager>,
     audio_manager: Res<AudioManager>,
+    menu_systems: Res<MenuSystems>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     mut next_player_state: ResMut<NextState<PlayerState>>,
     mut score: ResMut<Score>,
 ) {
-    score.0 = 1;
+    score.0 = 0;
+    commands.run_system(menu_systems.update_score_system_id);
     next_player_state.set(PlayerState::WaitingToStart);
     commands.spawn((
         AudioPlayer::new(audio_manager.swoosh_sound.clone()),

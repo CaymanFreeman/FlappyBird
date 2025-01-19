@@ -1,13 +1,15 @@
 use crate::assets::{AudioManager, FontManager, MUSIC_VOLUME};
 use crate::game::{despawn_player_and_pipes, GameState};
+use crate::player::Score;
 use bevy::app::{App, Plugin, PostStartup, Update};
 use bevy::asset::Handle;
 use bevy::audio::{AudioPlayer, PlaybackMode, PlaybackSettings, Volume};
 use bevy::color::Color;
-use bevy::hierarchy::{BuildChildren, ChildBuild, DespawnRecursiveExt};
+use bevy::ecs::system::SystemId;
+use bevy::hierarchy::{BuildChildren, ChildBuild, Children, DespawnRecursiveExt};
 use bevy::prelude::{
     in_state, AlignItems, Button, Changed, Commands, Component, Display, Entity, IntoSystemConfigs,
-    NextState, OnEnter, OnExit, Query, Res, ResMut, Text, Val, With,
+    NextState, OnEnter, OnExit, Query, Res, ResMut, Resource, Text, Val, With,
 };
 use bevy::text::{Font, FontSmoothing, TextColor, TextFont};
 use bevy::ui::{
@@ -38,6 +40,15 @@ pub(crate) const TITLE_OUTLINE_WIDTH_PX: f32 = 3.5;
 pub(crate) const TITLE_COLOR: [f32; 3] = [1.0, 1.0, 1.0]; // #FFFFFF
 pub(crate) const TITLE_OUTLINE_COLOR: [f32; 3] = [0.0, 0.0, 0.0]; // #000000
 
+pub(crate) const SCORE_DISPLAY_FONT_SIZE_PX: f32 = 50.0;
+pub(crate) const SCORE_DISPLAY_TOP_MARGIN: f32 = 30.0;
+pub(crate) const SCORE_DISPLAY_OUTLINE_WIDTH: f32 = 2.5;
+pub(crate) const SCORE_DISPLAY_COLOR: [f32; 3] = [1.0, 1.0, 1.0]; // #FFFFFF
+pub(crate) const SCORE_DISPLAY_OUTLINE_COLOR: [f32; 3] = [0.0, 0.0, 0.0]; // #000000
+
+#[derive(Component)]
+pub struct ScoreDisplay;
+
 pub(crate) const RETRY_MENU_ROW_GAP_PX: f32 = 8.0;
 
 pub(crate) struct MenuPlugin;
@@ -54,12 +65,22 @@ pub(crate) struct RetryButton;
 #[derive(Component)]
 pub(crate) struct MainMenuButton;
 
+#[derive(Resource)]
+pub(crate) struct MenuSystems {
+    pub update_score_system_id: SystemId,
+}
+
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             OnEnter(GameState::MainMenu),
-            (setup_main_menu, despawn_player_and_pipes),
+            (
+                setup_main_menu,
+                despawn_player_and_pipes,
+                despawn_score_display,
+            ),
         );
+        app.add_systems(OnEnter(GameState::Playing), spawn_score_display);
         app.add_systems(OnExit(GameState::MainMenu), despawn_main_menu);
         app.add_systems(
             Update,
@@ -74,6 +95,11 @@ impl Plugin for MenuPlugin {
                 next_game_state.set(GameState::MainMenu);
             },
         );
+
+        let update_score_system_id = app.register_system(update_score_display);
+        app.insert_resource(MenuSystems {
+            update_score_system_id,
+        });
     }
 }
 
@@ -97,6 +123,123 @@ pub(crate) fn setup_main_menu(
     );
 }
 
+pub(crate) fn spawn_score_display(
+    mut commands: Commands,
+    score: Res<Score>,
+    font_manager: Res<FontManager>,
+) {
+    commands
+        .spawn((Node {
+            display: Display::Flex,
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            ..Default::default()
+        },))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(SCORE_DISPLAY_TOP_MARGIN),
+                        ..Default::default()
+                    },
+                    ScoreDisplay,
+                ))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Node {
+                            position_type: PositionType::Absolute,
+                            top: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH),
+                            ..Default::default()
+                        },
+                        Text::new(score.0.to_string()),
+                        TextFont {
+                            font: font_manager.title_font.clone(),
+                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                            font_smoothing: FontSmoothing::None,
+                        },
+                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+                    ));
+                    parent.spawn((
+                        Node {
+                            position_type: PositionType::Absolute,
+                            top: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH),
+                            ..Default::default()
+                        },
+                        Text::new(score.0.to_string()),
+                        TextFont {
+                            font: font_manager.title_font.clone(),
+                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                            font_smoothing: FontSmoothing::None,
+                        },
+                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+                    ));
+                    parent.spawn((
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH),
+                            ..Default::default()
+                        },
+                        Text::new(score.0.to_string()),
+                        TextFont {
+                            font: font_manager.title_font.clone(),
+                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                            font_smoothing: FontSmoothing::None,
+                        },
+                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+                    ));
+                    parent.spawn((
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH),
+                            ..Default::default()
+                        },
+                        Text::new(score.0.to_string()),
+                        TextFont {
+                            font: font_manager.title_font.clone(),
+                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                            font_smoothing: FontSmoothing::None,
+                        },
+                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+                    ));
+                    parent.spawn((
+                        Text::new(score.0.to_string()),
+                        TextFont {
+                            font: font_manager.title_font.clone(),
+                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                            font_smoothing: FontSmoothing::None,
+                        },
+                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_COLOR)),
+                    ));
+                });
+        });
+}
+
+pub(crate) fn update_score_display(
+    score: Res<Score>,
+    mut score_display_query: Query<&Children, With<ScoreDisplay>>,
+    mut text_query: Query<&mut Text>,
+) {
+    if let Ok(children) = score_display_query.get_single_mut() {
+        for &child in children.iter() {
+            if let Ok(mut text) = text_query.get_mut(child) {
+                text.0 = score.0.to_string();
+            }
+        }
+    }
+}
+
+pub(crate) fn despawn_score_display(
+    mut commands: Commands,
+    score_display_query: Query<Entity, With<ScoreDisplay>>,
+) {
+    if let Ok(score_display) = score_display_query.get_single() {
+        commands.entity(score_display).despawn_recursive();
+    }
+}
+
 pub(crate) fn spawn_main_menu(
     mut commands: Commands,
     title_font: &Handle<Font>,
@@ -116,11 +259,11 @@ pub(crate) fn spawn_main_menu(
         ))
         .with_children(|parent| {
             parent
-                .spawn((Node {
+                .spawn(Node {
                     position_type: PositionType::Absolute,
                     top: Val::Px(TITLE_TOP_MARGIN_PX),
                     ..Default::default()
-                },))
+                })
                 .with_children(|parent| {
                     parent.spawn((
                         Node {

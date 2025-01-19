@@ -3,6 +3,7 @@ use crate::assets::{
     SMACK_SOUND_VOLUME, SPRITE_SCALE,
 };
 use crate::game::{GameState, WindowManager};
+use crate::menu::MenuSystems;
 use crate::pipe::{
     Pipe, ScoreZone, PIPE_GAP_SIZE, PIPE_HALF_HEIGHT, PIPE_HALF_WIDTH, SCORE_ZONE_WIDTH,
 };
@@ -216,6 +217,7 @@ pub(crate) fn handle_score(
     pipe_transform_query: Query<(Entity, &Transform), (With<Pipe>, With<ScoreZone>)>,
     audio_manager: Res<AudioManager>,
     mut score: ResMut<Score>,
+    menu_systems: Res<MenuSystems>,
 ) {
     if let Ok(player_transform) = player_transform_query.get_single() {
         for (entity, pipe_transform) in pipe_transform_query.iter() {
@@ -244,6 +246,7 @@ pub(crate) fn handle_score(
                 ));
                 commands.entity(entity).remove::<ScoreZone>();
                 score.0 += 1;
+                commands.run_system(menu_systems.update_score_system_id);
             }
         }
     }
