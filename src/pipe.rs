@@ -6,26 +6,36 @@ use bevy::asset::Handle;
 use bevy::image::Image;
 use bevy::math::{Vec2, Vec3};
 use bevy::prelude::{
-    in_state, Bundle, Commands, Component, IntoSystemConfigs, Query, Res, Transform,
+    in_state, Bundle, Commands, Component, Entity, IntoSystemConfigs, Query, Res, Transform,
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 
-const PIPE_AMOUNT: i32 = 10;
+const PIPE_AMOUNT: i32 = 4;
 pub(crate) const PIPE_WIDTH: f32 = 18.0;
 pub(crate) const PIPE_HEIGHT: f32 = 144.0;
+pub(crate) const PIPE_GAP_SIZE: f32 = 15.0;
 const PIPE_VERTICAL_OFFSET: f32 = 30.0;
-const PIPE_GAP_SIZE: f32 = 15.0;
 const PIPE_SPACING: f32 = 60.0;
 const PIPE_SPEED: f32 = 150.0;
-const PIPE_CENTER: f32 = (PIPE_HEIGHT / 2.0 + PIPE_GAP_SIZE) * SPRITE_SCALE;
+
+pub(crate) const PIPE_HALF_WIDTH: f32 = (PIPE_WIDTH * SPRITE_SCALE) / 2.0;
+pub(crate) const PIPE_HALF_HEIGHT: f32 = (PIPE_HEIGHT * SPRITE_SCALE) / 2.0;
+pub(crate) const SCORE_ZONE_WIDTH: f32 = PIPE_WIDTH * 0.05;
+const PIPE_VERTICAL_CENTER: f32 = (PIPE_HEIGHT / 2.0 + PIPE_GAP_SIZE) * SPRITE_SCALE;
+
+const DIRECTION_UP: f32 = 1.0;
+const DIRECTION_DOWN: f32 = -1.0;
 
 #[derive(Component)]
 pub(crate) struct Pipe {
     direction: f32,
 }
+
+#[derive(Component)]
+pub(crate) struct ScoreZone;
 
 #[derive(Bundle)]
 pub(crate) struct PipeBundle {
@@ -62,13 +72,14 @@ impl Plugin for PipePlugin {
 }
 
 pub(crate) fn update_pipe_transform(
-    mut pipe_query: Query<(&mut Pipe, &mut Transform)>,
+    mut commands: Commands,
+    mut pipe_query: Query<(Entity, &mut Pipe, &mut Transform)>,
     game_manager: Res<WindowManager>,
     time: Res<Time>,
 ) {
     let mut pipes_to_reset = Vec::new();
 
-    for (pipe, transform) in pipe_query.iter() {
+    for (_, pipe, transform) in pipe_query.iter() {
         if transform.translation.x + PIPE_WIDTH * SPRITE_SCALE / 2.0
             < -game_manager.window_dimensions.x / 2.0
         {
@@ -80,18 +91,21 @@ pub(crate) fn update_pipe_transform(
         let mut rand = thread_rng();
         let y_offset = generate_pipe_offset(&mut rand);
 
-        for (pipe, mut transform) in pipe_query.iter_mut() {
+        for (entity, pipe, mut transform) in pipe_query.iter_mut() {
             transform.translation.x -= time.delta_secs() * PIPE_SPEED;
 
             if transform.translation.x + PIPE_WIDTH * SPRITE_SCALE / 2.0
                 < -game_manager.window_dimensions.x / 2.0
             {
                 transform.translation.x += PIPE_AMOUNT as f32 * PIPE_SPACING * SPRITE_SCALE;
-                transform.translation.y = PIPE_CENTER * pipe.direction + y_offset;
+                transform.translation.y = PIPE_VERTICAL_CENTER * pipe.direction + y_offset;
+                if pipe.direction == DIRECTION_DOWN {
+                    commands.entity(entity).insert(ScoreZone);
+                }
             }
         }
     } else {
-        for (_pipe, mut transform) in pipe_query.iter_mut() {
+        for (_, _, mut transform) in pipe_query.iter_mut() {
             transform.translation.x -= time.delta_secs() * PIPE_SPEED;
         }
     }
@@ -102,14 +116,17 @@ pub(crate) fn spawn_pipes(commands: &mut Commands, window_width: f32, pipe_image
         let y_offset = generate_pipe_offset(&mut thread_rng());
         let x_pos = window_width / 2.0 + (PIPE_SPACING * SPRITE_SCALE * i as f32);
         commands.spawn(PipeBundle::new(
-            Vec2::X * x_pos + Vec2::Y * (PIPE_CENTER + y_offset),
-            1.0,
+            Vec2::X * x_pos + Vec2::Y * (PIPE_VERTICAL_CENTER + y_offset),
+            DIRECTION_UP,
             pipe_image,
         ));
-        commands.spawn(PipeBundle::new(
-            Vec2::X * x_pos + Vec2::Y * (-PIPE_CENTER + y_offset),
-            -1.0,
-            pipe_image,
+        commands.spawn((
+            PipeBundle::new(
+                Vec2::X * x_pos + Vec2::Y * (-PIPE_VERTICAL_CENTER + y_offset),
+                DIRECTION_DOWN,
+                pipe_image,
+            ),
+            ScoreZone,
         ));
     }
 }

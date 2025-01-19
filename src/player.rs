@@ -1,7 +1,9 @@
 use crate::assets::{AudioManager, PLAYER_SPRITE_Z, SPRITE_SCALE};
 use crate::game::{GameState, WindowManager, FALL_SOUND_DELAY};
-use crate::pipe::{Pipe, PIPE_HEIGHT, PIPE_WIDTH};
-use bevy::app::{App, FixedUpdate, Plugin, Update};
+use crate::pipe::{
+    Pipe, ScoreZone, PIPE_GAP_SIZE, PIPE_HALF_HEIGHT, PIPE_HALF_WIDTH, SCORE_ZONE_WIDTH,
+};
+use bevy::app::{App, FixedUpdate, Plugin, Startup, Update};
 use bevy::asset::Handle;
 use bevy::audio::AudioPlayer;
 use bevy::image::Image;
@@ -9,7 +11,8 @@ use bevy::input::ButtonInput;
 use bevy::math::{Quat, Rect, Vec2, Vec3};
 use bevy::prelude::{
     in_state, AppExtStates, Bundle, Commands, Component, Entity, IntoSystemConfigs, KeyCode, Mut,
-    NextState, Query, Res, ResMut, State, States, Timer, TimerMode, Transform, With, Without,
+    NextState, Query, Res, ResMut, Resource, State, States, Timer, TimerMode, Transform, With,
+    Without,
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
@@ -39,6 +42,9 @@ pub(crate) enum PlayerState {
     Falling,
     Flapping,
 }
+
+#[derive(Resource)]
+pub(crate) struct Score(pub u32);
 
 #[derive(Bundle)]
 pub(crate) struct PlayerBundle {
@@ -80,6 +86,9 @@ pub(crate) struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(Startup, |mut commands: Commands| {
+            commands.insert_resource(Score(0));
+        });
         app.init_state::<PlayerState>();
         app.add_systems(
             Update,
@@ -112,6 +121,9 @@ impl Plugin for PlayerPlugin {
                     .run_if(in_state(GameState::Playing))
                     .run_if(in_state(PlayerState::Flapping)),
                 handle_player_collision
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(PlayerState::Flapping)),
+                handle_score
                     .run_if(in_state(GameState::Playing))
                     .run_if(in_state(PlayerState::Flapping)),
             )
@@ -172,6 +184,39 @@ pub(crate) fn handle_player_input(
     }
 }
 
+pub(crate) fn handle_score(
+    mut commands: Commands,
+    player_transform_query: Query<&Transform, With<Player>>,
+    pipe_transform_query: Query<(Entity, &Transform), (With<Pipe>, With<ScoreZone>)>,
+    audio_manager: Res<AudioManager>,
+    mut score: ResMut<Score>,
+) {
+    if let Ok(player_transform) = player_transform_query.get_single() {
+        for (entity, pipe_transform) in pipe_transform_query.iter() {
+            let pipe_min_x = pipe_transform.translation.x - SCORE_ZONE_WIDTH / 2.0;
+            let pipe_max_x = pipe_transform.translation.x + SCORE_ZONE_WIDTH / 2.0;
+            let pipe_min_y = pipe_transform.translation.y + PIPE_HALF_HEIGHT;
+            let pipe_max_y =
+                pipe_transform.translation.y + PIPE_HALF_HEIGHT + PIPE_GAP_SIZE * SPRITE_SCALE;
+
+            let player_min_x = player_transform.translation.x - PLAYER_WIDTH * SPRITE_SCALE;
+            let player_max_x = player_transform.translation.x + PLAYER_WIDTH * SPRITE_SCALE;
+            let player_min_y = player_transform.translation.y - PLAYER_HEIGHT * SPRITE_SCALE;
+            let player_max_y = player_transform.translation.y + PLAYER_HEIGHT * SPRITE_SCALE;
+
+            if player_min_x < pipe_max_x
+                && player_max_x > pipe_min_x
+                && player_min_y < pipe_max_y
+                && player_max_y > pipe_min_y
+            {
+                commands.spawn(AudioPlayer::new(audio_manager.score_sound.clone()));
+                commands.entity(entity).remove::<ScoreZone>();
+                score.0 += 1;
+            }
+        }
+    }
+}
+
 pub(crate) fn handle_player_collision(
     mut commands: Commands,
     player_transform_query: Query<&Transform, With<Player>>,
@@ -206,12 +251,12 @@ pub(crate) fn player_pipe_collision(
     for pipe_transform in pipe_transform_query.iter() {
         let pipe_rect = Rect {
             min: Vec2::new(
-                pipe_transform.translation.x - (PIPE_WIDTH * SPRITE_SCALE) / 2.0,
-                pipe_transform.translation.y - (PIPE_HEIGHT * SPRITE_SCALE) / 2.0,
+                pipe_transform.translation.x - PIPE_HALF_WIDTH,
+                pipe_transform.translation.y - PIPE_HALF_HEIGHT,
             ),
             max: Vec2::new(
-                pipe_transform.translation.x + (PIPE_WIDTH * SPRITE_SCALE) / 2.0,
-                pipe_transform.translation.y + (PIPE_HEIGHT * SPRITE_SCALE) / 2.0,
+                pipe_transform.translation.x + PIPE_HALF_WIDTH,
+                pipe_transform.translation.y + PIPE_HALF_HEIGHT,
             ),
         };
 

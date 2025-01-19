@@ -1,7 +1,7 @@
 use crate::assets::{GameAssetPlugin, SpriteManager};
 use crate::menu::MenuPlugin;
 use crate::pipe::{spawn_pipes, Pipe, PipePlugin};
-use crate::player::{Player, PlayerBundle, PlayerPlugin, PlayerState};
+use crate::player::{Player, PlayerBundle, PlayerPlugin, PlayerState, Score};
 use bevy::app::{App, Plugin, PluginGroup, Startup};
 use bevy::audio::AudioPlayer;
 use bevy::math::Vec2;
@@ -80,7 +80,9 @@ pub(crate) fn setup_game(
     sprite_manager: Res<SpriteManager>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     mut next_state: ResMut<NextState<PlayerState>>,
+    mut score: ResMut<Score>,
 ) {
+    score.0 = 1;
     next_state.set(PlayerState::WaitingToStart);
     commands.spawn(PlayerBundle::new(&sprite_manager.player_sprite));
     if let Ok(window) = window_query.get_single() {
