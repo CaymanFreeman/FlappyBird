@@ -1,20 +1,19 @@
-use crate::assets::{AudioManager, FontManager, MUSIC_VOLUME};
-use crate::game::{despawn_player_and_pipes, GameState};
+use crate::assets::{AudioManager, FontManager, MUSIC_VOLUME, SWOOSH_SOUND_VOLUME};
+use crate::game::GameState;
 use crate::player::Score;
 use bevy::app::{App, Plugin, PostStartup, Update};
-use bevy::asset::Handle;
 use bevy::audio::{AudioPlayer, PlaybackMode, PlaybackSettings, Volume};
 use bevy::color::Color;
 use bevy::ecs::system::SystemId;
 use bevy::hierarchy::{BuildChildren, ChildBuild, Children, DespawnRecursiveExt};
 use bevy::prelude::{
-    in_state, AlignItems, Button, Changed, Commands, Component, Display, Entity, IntoSystemConfigs,
-    NextState, OnEnter, OnExit, Query, Res, ResMut, Resource, Text, Val, With,
+    AlignItems, Button, Changed, Commands, Component, Display, Entity, NextState, Query, Res,
+    ResMut, Resource, Text, Val, With,
 };
-use bevy::text::{Font, FontSmoothing, TextColor, TextFont};
+use bevy::text::{FontSmoothing, TextColor, TextFont};
 use bevy::ui::{
-    BackgroundColor, BorderColor, BorderRadius, FlexDirection, Interaction, JustifyContent, Node,
-    PositionType, UiRect,
+    AlignSelf, BackgroundColor, BorderColor, BorderRadius, FlexDirection, Interaction,
+    JustifyContent, JustifySelf, Node, PositionType, UiRect,
 };
 
 pub(crate) const TITLE_TEXT: &str = "FlappyBird";
@@ -41,8 +40,8 @@ pub(crate) const TITLE_COLOR: [f32; 3] = [1.0, 1.0, 1.0]; // #FFFFFF
 pub(crate) const TITLE_OUTLINE_COLOR: [f32; 3] = [0.0, 0.0, 0.0]; // #000000
 
 pub(crate) const SCORE_DISPLAY_FONT_SIZE_PX: f32 = 50.0;
-pub(crate) const SCORE_DISPLAY_TOP_MARGIN: f32 = 30.0;
-pub(crate) const SCORE_DISPLAY_OUTLINE_WIDTH: f32 = 2.5;
+pub(crate) const SCORE_DISPLAY_TOP_MARGIN_PX: f32 = 30.0;
+pub(crate) const SCORE_DISPLAY_OUTLINE_WIDTH_PX: f32 = 2.5;
 pub(crate) const SCORE_DISPLAY_COLOR: [f32; 3] = [1.0, 1.0, 1.0]; // #FFFFFF
 pub(crate) const SCORE_DISPLAY_OUTLINE_COLOR: [f32; 3] = [0.0, 0.0, 0.0]; // #000000
 
@@ -55,6 +54,9 @@ pub(crate) struct MenuPlugin;
 
 #[derive(Component)]
 pub(crate) struct MainMenu;
+
+#[derive(Component)]
+pub(crate) struct RetryMenu;
 
 #[derive(Component)]
 pub(crate) struct PlayButton;
@@ -73,20 +75,12 @@ pub(crate) struct MenuSystems {
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            OnEnter(GameState::MainMenu),
-            (
-                setup_main_menu,
-                despawn_player_and_pipes,
-                despawn_score_display,
-            ),
-        );
-        app.add_systems(OnEnter(GameState::Playing), spawn_score_display);
-        app.add_systems(OnExit(GameState::MainMenu), despawn_main_menu);
-        app.add_systems(
             Update,
             (
-                pressed_play_button.run_if(in_state(GameState::MainMenu)),
-                update_button_hover.run_if(in_state(GameState::MainMenu)),
+                pressed_play_button,
+                pressed_retry_button,
+                pressed_main_menu_button,
+                update_button_hover,
             ),
         );
         app.add_systems(
@@ -103,117 +97,91 @@ impl Plugin for MenuPlugin {
     }
 }
 
-pub(crate) fn setup_main_menu(
-    mut commands: Commands,
-    audio_manager: Res<AudioManager>,
-    font_manager: Res<FontManager>,
-) {
-    commands.spawn((
-        AudioPlayer::new(audio_manager.music.clone()),
-        PlaybackSettings {
-            volume: Volume::new(MUSIC_VOLUME),
-            mode: PlaybackMode::Loop,
-            ..Default::default()
-        },
-    ));
-    spawn_main_menu(
-        commands,
-        &font_manager.title_font,
-        &font_manager.button_font,
-    );
-}
-
 pub(crate) fn spawn_score_display(
     mut commands: Commands,
-    score: Res<Score>,
+    mut score: ResMut<Score>,
     font_manager: Res<FontManager>,
 ) {
+    score.0 = 0;
     commands
-        .spawn((Node {
-            display: Display::Flex,
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            ..Default::default()
-        },))
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(SCORE_DISPLAY_TOP_MARGIN_PX),
+                justify_self: JustifySelf::Center,
+                align_self: AlignSelf::Center,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..Default::default()
+            },
+            ScoreDisplay,
+        ))
         .with_children(|parent| {
-            parent
-                .spawn((
-                    Node {
-                        position_type: PositionType::Absolute,
-                        top: Val::Px(SCORE_DISPLAY_TOP_MARGIN),
-                        ..Default::default()
-                    },
-                    ScoreDisplay,
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        Node {
-                            position_type: PositionType::Absolute,
-                            top: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH),
-                            ..Default::default()
-                        },
-                        Text::new(score.0.to_string()),
-                        TextFont {
-                            font: font_manager.title_font.clone(),
-                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                            font_smoothing: FontSmoothing::None,
-                        },
-                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-                    ));
-                    parent.spawn((
-                        Node {
-                            position_type: PositionType::Absolute,
-                            top: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH),
-                            ..Default::default()
-                        },
-                        Text::new(score.0.to_string()),
-                        TextFont {
-                            font: font_manager.title_font.clone(),
-                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                            font_smoothing: FontSmoothing::None,
-                        },
-                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-                    ));
-                    parent.spawn((
-                        Node {
-                            position_type: PositionType::Absolute,
-                            left: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH),
-                            ..Default::default()
-                        },
-                        Text::new(score.0.to_string()),
-                        TextFont {
-                            font: font_manager.title_font.clone(),
-                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                            font_smoothing: FontSmoothing::None,
-                        },
-                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-                    ));
-                    parent.spawn((
-                        Node {
-                            position_type: PositionType::Absolute,
-                            left: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH),
-                            ..Default::default()
-                        },
-                        Text::new(score.0.to_string()),
-                        TextFont {
-                            font: font_manager.title_font.clone(),
-                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                            font_smoothing: FontSmoothing::None,
-                        },
-                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-                    ));
-                    parent.spawn((
-                        Text::new(score.0.to_string()),
-                        TextFont {
-                            font: font_manager.title_font.clone(),
-                            font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                            font_smoothing: FontSmoothing::None,
-                        },
-                        TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_COLOR)),
-                    ));
-                });
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH_PX),
+                    ..Default::default()
+                },
+                Text::new("0"),
+                TextFont {
+                    font: font_manager.title_font.clone(),
+                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                    font_smoothing: FontSmoothing::None,
+                },
+                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+            ));
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH_PX),
+                    ..Default::default()
+                },
+                Text::new("0"),
+                TextFont {
+                    font: font_manager.title_font.clone(),
+                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                    font_smoothing: FontSmoothing::None,
+                },
+                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+            ));
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH_PX),
+                    ..Default::default()
+                },
+                Text::new("0"),
+                TextFont {
+                    font: font_manager.title_font.clone(),
+                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                    font_smoothing: FontSmoothing::None,
+                },
+                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+            ));
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH_PX),
+                    ..Default::default()
+                },
+                Text::new("0"),
+                TextFont {
+                    font: font_manager.title_font.clone(),
+                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                    font_smoothing: FontSmoothing::None,
+                },
+                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
+            ));
+            parent.spawn((
+                Text::new("0"),
+                TextFont {
+                    font: font_manager.title_font.clone(),
+                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
+                    font_smoothing: FontSmoothing::None,
+                },
+                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_COLOR)),
+            ));
         });
 }
 
@@ -242,9 +210,17 @@ pub(crate) fn despawn_score_display(
 
 pub(crate) fn spawn_main_menu(
     mut commands: Commands,
-    title_font: &Handle<Font>,
-    button_font: &Handle<Font>,
+    font_manager: Res<FontManager>,
+    audio_manager: Res<AudioManager>,
 ) {
+    commands.spawn((
+        AudioPlayer::new(audio_manager.music.clone()),
+        PlaybackSettings {
+            volume: Volume::new(MUSIC_VOLUME),
+            mode: PlaybackMode::Loop,
+            ..Default::default()
+        },
+    ));
     commands
         .spawn((
             Node {
@@ -273,7 +249,7 @@ pub(crate) fn spawn_main_menu(
                         },
                         Text::new(TITLE_TEXT),
                         TextFont {
-                            font: title_font.clone(),
+                            font: font_manager.title_font.clone(),
                             font_size: TITLE_FONT_SIZE_PX,
                             font_smoothing: FontSmoothing::None,
                         },
@@ -287,7 +263,7 @@ pub(crate) fn spawn_main_menu(
                         },
                         Text::new(TITLE_TEXT),
                         TextFont {
-                            font: title_font.clone(),
+                            font: font_manager.title_font.clone(),
                             font_size: TITLE_FONT_SIZE_PX,
                             font_smoothing: FontSmoothing::None,
                         },
@@ -301,7 +277,7 @@ pub(crate) fn spawn_main_menu(
                         },
                         Text::new(TITLE_TEXT),
                         TextFont {
-                            font: title_font.clone(),
+                            font: font_manager.title_font.clone(),
                             font_size: TITLE_FONT_SIZE_PX,
                             font_smoothing: FontSmoothing::None,
                         },
@@ -315,7 +291,7 @@ pub(crate) fn spawn_main_menu(
                         },
                         Text::new(TITLE_TEXT),
                         TextFont {
-                            font: title_font.clone(),
+                            font: font_manager.title_font.clone(),
                             font_size: TITLE_FONT_SIZE_PX,
                             font_smoothing: FontSmoothing::None,
                         },
@@ -324,7 +300,7 @@ pub(crate) fn spawn_main_menu(
                     parent.spawn((
                         Text::new(TITLE_TEXT),
                         TextFont {
-                            font: title_font.clone(),
+                            font: font_manager.title_font.clone(),
                             font_size: TITLE_FONT_SIZE_PX,
                             font_smoothing: FontSmoothing::None,
                         },
@@ -359,7 +335,7 @@ pub(crate) fn spawn_main_menu(
                     parent.spawn((
                         Text::new(PLAY_BUTTON_TEXT),
                         TextFont {
-                            font: button_font.clone(),
+                            font: font_manager.button_font.clone(),
                             font_size: BUTTON_FONT_SIZE_PX,
                             font_smoothing: FontSmoothing::None,
                         },
@@ -372,9 +348,103 @@ pub(crate) fn spawn_main_menu(
 pub(crate) fn despawn_main_menu(
     mut commands: Commands,
     main_menu_query: Query<Entity, With<MainMenu>>,
+    audio_query: Query<Entity, With<AudioPlayer>>,
+    audio_manager: Res<AudioManager>,
 ) {
     if let Ok(main_menu) = main_menu_query.get_single() {
         commands.entity(main_menu).despawn_recursive();
+    }
+    for entity in audio_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    commands.spawn((
+        AudioPlayer::new(audio_manager.swoosh_sound.clone()),
+        PlaybackSettings {
+            volume: Volume::new(SWOOSH_SOUND_VOLUME),
+            ..Default::default()
+        },
+    ));
+}
+
+pub(crate) fn spawn_retry_menu(mut commands: Commands, font_manager: Res<FontManager>) {
+    commands
+        .spawn((
+            Node {
+                display: Display::Flex,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                row_gap: Val::Px(RETRY_MENU_ROW_GAP_PX),
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..Default::default()
+            },
+            RetryMenu,
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Px(BUTTON_WIDTH_PX),
+                        height: Val::Px(BUTTON_HEIGHT_PX),
+                        border: UiRect::all(Val::Px(BUTTON_BORDER_PX)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..Default::default()
+                    },
+                    BorderColor(Color::srgb_from_array(BUTTON_BORDER_COLOR)),
+                    BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
+                    BackgroundColor(Color::srgb_from_array(BUTTON_BACKGROUND_COLOR)),
+                    Button,
+                    RetryButton,
+                ))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Text::new(RETRY_BUTTON_TEXT),
+                        TextFont {
+                            font: font_manager.button_font.clone(),
+                            font_size: BUTTON_FONT_SIZE_PX,
+                            font_smoothing: FontSmoothing::None,
+                        },
+                        TextColor::from(Color::srgb_from_array(BUTTON_TEXT_COLOR)),
+                    ));
+                });
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Px(BUTTON_WIDTH_PX),
+                        height: Val::Px(BUTTON_HEIGHT_PX),
+                        border: UiRect::all(Val::Px(BUTTON_BORDER_PX)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..Default::default()
+                    },
+                    BorderColor(Color::srgb_from_array(BUTTON_BORDER_COLOR)),
+                    BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
+                    BackgroundColor(Color::srgb_from_array(BUTTON_BACKGROUND_COLOR)),
+                    Button,
+                    MainMenuButton,
+                ))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Text::new(MAIN_MENU_BUTTON_TEXT),
+                        TextFont {
+                            font: font_manager.button_font.clone(),
+                            font_size: BUTTON_FONT_SIZE_PX,
+                            font_smoothing: FontSmoothing::None,
+                        },
+                        TextColor::from(Color::srgb_from_array(BUTTON_TEXT_COLOR)),
+                    ));
+                });
+        });
+}
+
+pub(crate) fn despawn_retry_menu(
+    mut commands: Commands,
+    retry_menu_query: Query<Entity, With<RetryMenu>>,
+) {
+    if let Ok(retry_menu) = retry_menu_query.get_single() {
+        commands.entity(retry_menu).despawn_recursive();
     }
 }
 
@@ -393,6 +463,28 @@ pub(crate) fn update_button_hover(
                 background_color.0 = Color::srgb_from_array(BUTTON_BACKGROUND_COLOR);
             }
             Interaction::Pressed => (),
+        }
+    }
+}
+
+pub(crate) fn pressed_retry_button(
+    mut button_query: Query<&Interaction, (Changed<Interaction>, With<RetryButton>)>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+) {
+    if let Ok(interaction) = button_query.get_single_mut() {
+        if let Interaction::Pressed = interaction {
+            next_game_state.set(GameState::Playing)
+        }
+    }
+}
+
+pub(crate) fn pressed_main_menu_button(
+    mut button_query: Query<&Interaction, (Changed<Interaction>, With<MainMenuButton>)>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+) {
+    if let Ok(interaction) = button_query.get_single_mut() {
+        if let Interaction::Pressed = interaction {
+            next_game_state.set(GameState::MainMenu)
         }
     }
 }

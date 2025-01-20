@@ -1,6 +1,6 @@
 use crate::assets::{
-    AudioManager, FALL_SOUND_VOLUME, FLAP_SOUND_VOLUME, PLAYER_SPRITE_Z, SCORE_SOUND_VOLUME,
-    SMACK_SOUND_VOLUME, SPRITE_SCALE,
+    AudioManager, SpriteManager, FALL_SOUND_VOLUME, FLAP_SOUND_VOLUME, PLAYER_SPRITE_Z,
+    SCORE_SOUND_VOLUME, SMACK_SOUND_VOLUME, SPRITE_SCALE,
 };
 use crate::game::{GameState, WindowManager};
 use crate::menu::MenuSystems;
@@ -77,6 +77,16 @@ impl PlayerBundle {
     }
 }
 
+pub(crate) fn spawn_player(mut commands: Commands, sprite_manager: Res<SpriteManager>) {
+    commands.spawn(PlayerBundle::new(&sprite_manager.player_sprite));
+}
+
+pub(crate) fn despawn_player(mut commands: Commands, player_query: Query<Entity, With<Player>>) {
+    for entity in player_query.iter() {
+        commands.entity(entity).despawn();
+    }
+}
+
 #[derive(Component)]
 pub(crate) struct FallDelayTimer(Timer);
 
@@ -111,42 +121,20 @@ impl Plugin for PlayerPlugin {
         app.init_state::<PlayerState>();
         app.add_systems(
             Update,
-            handle_frozen_toggle
-                .run_if(in_state(GameState::Playing))
-                .run_if(in_state(PlayerState::WaitingToStart)),
-        );
-        app.add_systems(
-            Update,
-            handle_fall_animation
-                .run_if(in_state(GameState::Playing))
-                .run_if(in_state(PlayerState::Falling)),
-        );
-        app.add_systems(
-            Update,
             (
-                update_fall_sound_delay_timer
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayerState::WaitingToFall)),
-                handle_player_input
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayerState::Flapping)),
-                update_fall_reset_delay_timer
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayerState::Falling)),
+                handle_frozen_toggle.run_if(in_state(PlayerState::WaitingToStart)),
+                update_fall_sound_delay_timer.run_if(in_state(PlayerState::WaitingToFall)),
+                handle_fall_animation.run_if(in_state(PlayerState::Falling)),
+                handle_player_input.run_if(in_state(PlayerState::Flapping)),
+                update_fall_reset_delay_timer.run_if(in_state(PlayerState::Falling)),
             ),
         );
         app.add_systems(
             FixedUpdate,
             (
-                update_player_transform
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayerState::Flapping)),
-                handle_player_collision
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayerState::Flapping)),
-                handle_score
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(PlayerState::Flapping)),
+                update_player_transform.run_if(in_state(PlayerState::Flapping)),
+                handle_player_collision.run_if(in_state(PlayerState::Flapping)),
+                handle_score.run_if(in_state(PlayerState::Flapping)),
             )
                 .chain(),
         );
@@ -353,7 +341,7 @@ pub(crate) fn update_fall_reset_delay_timer(
     if let Ok((entity, mut delay_timer)) = query.get_single_mut() {
         if delay_timer.0.tick(time.delta()).just_finished() {
             commands.entity(entity).despawn();
-            next_game_state.set(GameState::MainMenu);
+            next_game_state.set(GameState::RetryMenu);
         }
     }
 }

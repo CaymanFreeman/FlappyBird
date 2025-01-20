@@ -1,5 +1,5 @@
-use crate::assets::{PIPE_SPRITE_Z, SPRITE_SCALE};
-use crate::game::{GameState, WindowManager};
+use crate::assets::{SpriteManager, PIPE_SPRITE_Z, SPRITE_SCALE};
+use crate::game::WindowManager;
 use crate::player::PlayerState;
 use bevy::app::{App, FixedUpdate, Plugin};
 use bevy::asset::Handle;
@@ -7,9 +7,11 @@ use bevy::image::Image;
 use bevy::math::{Vec2, Vec3};
 use bevy::prelude::{
     in_state, Bundle, Commands, Component, Entity, IntoSystemConfigs, Query, Res, Transform,
+    Window, With,
 };
 use bevy::sprite::Sprite;
 use bevy::time::Time;
+use bevy::window::PrimaryWindow;
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 
@@ -64,9 +66,7 @@ impl Plugin for PipePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedUpdate,
-            update_pipe_transform
-                .run_if(in_state(GameState::Playing))
-                .run_if(in_state(PlayerState::Flapping)),
+            update_pipe_transform.run_if(in_state(PlayerState::Flapping)),
         );
     }
 }
@@ -111,23 +111,35 @@ pub(crate) fn update_pipe_transform(
     }
 }
 
-pub(crate) fn spawn_pipes(commands: &mut Commands, window_width: f32, pipe_image: &Handle<Image>) {
+pub(crate) fn spawn_pipes(
+    mut commands: Commands,
+    sprite_manager: Res<SpriteManager>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
     for i in 0..PIPE_AMOUNT {
         let y_offset = generate_pipe_offset(&mut thread_rng());
-        let x_pos = window_width / 2.0 + (PIPE_SPACING * SPRITE_SCALE * i as f32);
-        commands.spawn(PipeBundle::new(
-            Vec2::X * x_pos + Vec2::Y * (PIPE_VERTICAL_CENTER + y_offset),
-            DIRECTION_UP,
-            pipe_image,
-        ));
-        commands.spawn((
-            PipeBundle::new(
-                Vec2::X * x_pos + Vec2::Y * (-PIPE_VERTICAL_CENTER + y_offset),
-                DIRECTION_DOWN,
-                pipe_image,
-            ),
-            ScoreZone,
-        ));
+        if let Ok(window) = window_query.get_single() {
+            let x_pos = window.width() / 2.0 + (PIPE_SPACING * SPRITE_SCALE * i as f32);
+            commands.spawn(PipeBundle::new(
+                Vec2::X * x_pos + Vec2::Y * (PIPE_VERTICAL_CENTER + y_offset),
+                DIRECTION_UP,
+                &sprite_manager.pipe_sprite.clone(),
+            ));
+            commands.spawn((
+                PipeBundle::new(
+                    Vec2::X * x_pos + Vec2::Y * (-PIPE_VERTICAL_CENTER + y_offset),
+                    DIRECTION_DOWN,
+                    &sprite_manager.pipe_sprite.clone(),
+                ),
+                ScoreZone,
+            ));
+        }
+    }
+}
+
+pub(crate) fn despawn_pipes(mut commands: Commands, pipe_query: Query<Entity, With<Pipe>>) {
+    for entity in pipe_query.iter() {
+        commands.entity(entity).despawn();
     }
 }
 
