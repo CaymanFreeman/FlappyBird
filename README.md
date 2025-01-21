@@ -89,7 +89,7 @@ rustup target add wasm32-unknown-unknown
 #### Build
 
 ```bash
-cargo build --release --target wasm32-unknown-unknown
+cargo build --profile wasm-release --target wasm32-unknown-unknown
 ```
 
 #### Generate JavaScript Bindings
