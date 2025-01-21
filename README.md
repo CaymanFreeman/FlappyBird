@@ -95,7 +95,7 @@ cargo build --profile wasm-release --target wasm32-unknown-unknown
 #### Generate JavaScript Bindings
 
 ```bash
-wasm-bindgen --no-typescript --target web --out-dir ./out/ --out-name "flappy_bird" ./target/wasm32-unknown-unknown/release/flappy_bird.wasm
+wasm-bindgen --no-typescript --target web --out-dir ./out/ --out-name "flappy_bird" ./target/wasm32-unknown-unknown/wasm-release/flappy_bird.wasm
 ```
 
 #### Copy Assets & HTML
