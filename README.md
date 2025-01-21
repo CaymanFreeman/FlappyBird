@@ -48,4 +48,68 @@ of the game is hosted on this repository's [gh-pages](https://github.com/CaymanF
 
 ## Local Build
 
-W.I.P.
+Ensure that you have installed [Git](https://git-scm.com/downloads)
+and [Cargo](https://www.rust-lang.org/tools/install). Cargo and the Rust
+language are bundled together in the rustup installer.
+
+### Traditional Build
+
+#### Clone Repository
+
+```bash
+git clone https://github.com/CaymanFreeman/FlappyBird && cd FlappyBird
+```
+
+#### Build & Run
+
+```bash
+cargo run --release 
+```
+
+### WASM Build & HTTP Server
+
+#### Clone Repository
+
+```bash
+git clone https://github.com/CaymanFreeman/FlappyBird && cd FlappyBird
+```
+
+#### Install WASM Bindgen CLI & Basic HTML Server
+
+```bash
+cargo install wasm-bindgen-cli basic-http-server
+```
+
+#### Add Build Target
+
+```bash
+rustup target add wasm32-unknown-unknown
+```
+
+#### Build
+
+```bash
+cargo build --release --target wasm32-unknown-unknown
+```
+
+#### Generate JavaScript Bindings
+
+```bash
+wasm-bindgen --no-typescript --target web --out-dir ./out/ --out-name "flappy_bird" ./target/wasm32-unknown-unknown/release/flappy_bird.wasm
+```
+
+#### Copy Assets & HTML
+
+```bash
+cp -r assets ./out/; cp -r web/* ./out/
+```
+
+#### Start HTTP Server
+
+```bash
+basic-http-server out -a 127.0.0.1:4000
+```
+
+‎
+
+hi :)
