@@ -56,8 +56,6 @@ pub(crate) fn spawn_main_menu(
                 });
             spawn_button(
                 parent,
-                BUTTON_WIDTH_PX,
-                BUTTON_HEIGHT_PX,
                 PLAY_BUTTON_TEXT,
                 fonts.button_font.clone(),
                 PlayButton,

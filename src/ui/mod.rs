@@ -106,8 +106,6 @@ pub(crate) fn spawn_outlined_text(
 
 pub(crate) fn spawn_button(
     parent: &mut ChildBuilder,
-    width: f32,
-    height: f32,
     text: &str,
     font: Handle<Font>,
     button_component: impl Bundle,
@@ -115,8 +113,8 @@ pub(crate) fn spawn_button(
     parent
         .spawn((
             Node {
-                width: Val::Px(width),
-                height: Val::Px(height),
+                width: Val::Px(BUTTON_WIDTH_PX),
+                height: Val::Px(BUTTON_HEIGHT_PX),
                 border: UiRect::all(Val::Px(BUTTON_BORDER_PX)),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,

@@ -29,16 +29,12 @@ pub(crate) fn spawn_retry_menu(mut commands: Commands, fonts: Res<FontAssets>) {
         .with_children(|parent| {
             spawn_button(
                 parent,
-                BUTTON_WIDTH_PX,
-                BUTTON_HEIGHT_PX,
                 RETRY_BUTTON_TEXT,
                 fonts.button_font.clone(),
                 RetryButton,
             );
             spawn_button(
                 parent,
-                BUTTON_WIDTH_PX,
-                BUTTON_HEIGHT_PX,
                 MAIN_MENU_BUTTON_TEXT,
                 fonts.button_font.clone(),
                 MainMenuButton,
