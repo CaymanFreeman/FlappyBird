@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::text::FontSmoothing;
 
 mod main_menu;
 mod retry_menu;
@@ -10,6 +11,9 @@ use crate::gameplay::{PIPE_SPACING, PIPE_SPEED};
 pub(crate) use main_menu::*;
 pub(crate) use retry_menu::*;
 pub(crate) use score::*;
+
+// Outlined Text
+const OUTLINE_OFFSETS: [[f32; 2]; 4] = [[0.0, 1.0], [0.0, -1.0], [1.0, 0.0], [-1.0, 0.0]];
 
 // General Buttons
 const BUTTON_COLOR: [f32; 3] = [0.984, 0.949, 0.212]; // #fbf236
@@ -31,7 +35,6 @@ const TITLE_COLOR: [f32; 3] = [1.0, 1.0, 1.0]; // #FFFFFF
 const TITLE_OUTLINE_COLOR: [f32; 3] = [0.0, 0.0, 0.0]; // #000000
 
 const PLAY_BUTTON_TEXT: &str = "Play";
-const PLAY_BUTTON_OFFSET_PX: f32 = 50.0;
 
 // Retry Menu
 const RETRY_MENU_ROW_GAP_PX: f32 = 8.0;
@@ -62,6 +65,82 @@ impl Plugin for GameUiPlugin {
             ),
         );
     }
+}
+
+pub(crate) fn spawn_outlined_text(
+    parent: &mut ChildBuilder,
+    text: &str,
+    font: Handle<Font>,
+    font_size: f32,
+    text_color: [f32; 3],
+    outline_color: [f32; 3],
+    outline_width: f32,
+) {
+    for offset in OUTLINE_OFFSETS.iter() {
+        parent.spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(offset[0] * outline_width),
+                left: Val::Px(offset[1] * outline_width),
+                ..Default::default()
+            },
+            Text::new(text),
+            TextFont {
+                font: font.clone(),
+                font_size,
+                font_smoothing: FontSmoothing::None,
+            },
+            TextColor::from(Color::srgb_from_array(outline_color)),
+        ));
+    }
+    parent.spawn((
+        Text::new(text),
+        TextFont {
+            font,
+            font_size,
+            font_smoothing: FontSmoothing::None,
+        },
+        TextColor::from(Color::srgb_from_array(text_color)),
+    ));
+}
+
+pub(crate) fn spawn_button(
+    parent: &mut ChildBuilder,
+    width: f32,
+    height: f32,
+    text: &str,
+    font: Handle<Font>,
+    button_component: impl Bundle,
+) {
+    parent
+        .spawn((
+            Node {
+                width: Val::Px(width),
+                height: Val::Px(height),
+                border: UiRect::all(Val::Px(BUTTON_BORDER_PX)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..Default::default()
+            },
+            BorderColor(Color::srgb_from_array(BUTTON_BORDER_COLOR)),
+            BorderRadius::all(Val::Px(BUTTON_BORDER_RADIUS_PX)),
+            BackgroundColor(Color::srgb_from_array(BUTTON_COLOR)),
+            Button,
+            button_component,
+        ))
+        .with_children(|parent| spawn_button_text(parent, text, font));
+}
+
+pub(crate) fn spawn_button_text(parent: &mut ChildBuilder, text: &str, font: Handle<Font>) {
+    parent.spawn((
+        Text::new(text),
+        TextFont {
+            font,
+            font_size: BUTTON_FONT_SIZE_PX,
+            font_smoothing: FontSmoothing::None,
+        },
+        TextColor::from(Color::srgb_from_array(BUTTON_TEXT_COLOR)),
+    ));
 }
 
 fn handle_button_hover(

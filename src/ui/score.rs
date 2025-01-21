@@ -1,7 +1,6 @@
 use super::*;
 use crate::assets::{AudioAssets, FontAssets, SCORE_SOUND_VOLUME};
 use bevy::audio::Volume;
-use bevy::text::FontSmoothing;
 use std::time::Duration;
 
 #[derive(Resource)]
@@ -25,79 +24,20 @@ pub(crate) fn spawn_score_display(
                 position_type: PositionType::Absolute,
                 top: Val::Px(SCORE_DISPLAY_TOP_MARGIN_PX),
                 justify_self: JustifySelf::Center,
-                align_self: AlignSelf::Center,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
                 ..Default::default()
             },
             ScoreDisplay,
         ))
         .with_children(|parent| {
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH_PX),
-                    ..Default::default()
-                },
-                Text::new("0"),
-                TextFont {
-                    font: fonts.title_font.clone(),
-                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                    font_smoothing: FontSmoothing::None,
-                },
-                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-            ));
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH_PX),
-                    ..Default::default()
-                },
-                Text::new("0"),
-                TextFont {
-                    font: fonts.title_font.clone(),
-                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                    font_smoothing: FontSmoothing::None,
-                },
-                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-            ));
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(-SCORE_DISPLAY_OUTLINE_WIDTH_PX),
-                    ..Default::default()
-                },
-                Text::new("0"),
-                TextFont {
-                    font: fonts.title_font.clone(),
-                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                    font_smoothing: FontSmoothing::None,
-                },
-                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-            ));
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(SCORE_DISPLAY_OUTLINE_WIDTH_PX),
-                    ..Default::default()
-                },
-                Text::new("0"),
-                TextFont {
-                    font: fonts.title_font.clone(),
-                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                    font_smoothing: FontSmoothing::None,
-                },
-                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_OUTLINE_COLOR)),
-            ));
-            parent.spawn((
-                Text::new("0"),
-                TextFont {
-                    font: fonts.title_font.clone(),
-                    font_size: SCORE_DISPLAY_FONT_SIZE_PX,
-                    font_smoothing: FontSmoothing::None,
-                },
-                TextColor::from(Color::srgb_from_array(SCORE_DISPLAY_COLOR)),
-            ));
+            spawn_outlined_text(
+                parent,
+                &score.0.to_string(),
+                fonts.title_font.clone(),
+                SCORE_DISPLAY_FONT_SIZE_PX,
+                SCORE_DISPLAY_COLOR,
+                SCORE_DISPLAY_OUTLINE_COLOR,
+                SCORE_DISPLAY_OUTLINE_WIDTH_PX,
+            );
         });
 }
 
