@@ -1,7 +1,6 @@
+mod app;
 mod assets;
-mod game;
-mod menu;
-mod pipe;
-mod player;
+mod gameplay;
+mod ui;
 
-pub use crate::game::GamePlugin;
+pub use app::AppPlugin;
