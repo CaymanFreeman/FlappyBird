@@ -1,6 +1,4 @@
 use super::*;
-use crate::app::{AppState, WINDOW_MAX_Y, WINDOW_MIN_Y};
-use crate::ui::ScoreTimer;
 use bevy::audio::Volume;
 use pipes::Pipe;
 use std::time::Duration;

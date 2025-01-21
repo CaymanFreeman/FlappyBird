@@ -1,8 +1,5 @@
-use crate::assets::*;
-use crate::gameplay::*;
-use crate::ui::*;
+use super::*;
 use bevy::asset::AssetMetaCheck;
-use bevy::prelude::*;
 
 mod app_state;
 

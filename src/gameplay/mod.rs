@@ -1,6 +1,4 @@
-use crate::assets::*;
-use crate::ui::Score;
-use bevy::prelude::*;
+use super::*;
 
 mod pipes;
 mod player;

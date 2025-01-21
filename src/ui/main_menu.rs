@@ -1,6 +1,4 @@
 use super::*;
-use crate::app::AppState;
-use crate::assets::{AudioAssets, FontAssets, MUSIC_VOLUME, SWOOSH_SOUND_VOLUME};
 use bevy::audio::{PlaybackMode, Volume};
 
 #[derive(Component)]

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use super::*;
 use bevy::text::FontSmoothing;
 
 mod main_menu;
@@ -6,8 +6,6 @@ mod retry_menu;
 mod score;
 
 // Re-exports
-use crate::assets::SPRITE_SCALE;
-use crate::gameplay::{PIPE_SPACING, PIPE_SPEED};
 pub(crate) use main_menu::*;
 pub(crate) use retry_menu::*;
 pub(crate) use score::*;

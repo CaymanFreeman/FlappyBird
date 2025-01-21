@@ -1,5 +1,4 @@
 use super::*;
-use crate::assets::{AudioAssets, FontAssets, SCORE_SOUND_VOLUME};
 use bevy::audio::Volume;
 use std::time::Duration;
 

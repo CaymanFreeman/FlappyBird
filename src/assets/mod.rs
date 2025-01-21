@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use super::*;
 
 mod audio;
 mod fonts;

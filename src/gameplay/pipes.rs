@@ -1,5 +1,4 @@
 use super::*;
-use crate::app::WINDOW_MIN_X;
 use bevy::window::PrimaryWindow;
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};

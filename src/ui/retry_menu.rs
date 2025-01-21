@@ -1,6 +1,4 @@
 use super::*;
-use crate::app::AppState;
-use crate::assets::FontAssets;
 
 #[derive(Component)]
 pub(crate) struct RetryMenu;
