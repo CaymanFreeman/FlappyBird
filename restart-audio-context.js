@@ -1,4 +1,5 @@
-// taken from https://developer.chrome.com/blog/web-audio-autoplay/#moving-forward
+// https://developer.chrome.com/blog/web-audio-autoplay/#moving-forward
+
 (function () {
     // An array of all contexts to resume on the page
     const audioContextList = [];
