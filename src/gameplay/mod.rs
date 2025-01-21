@@ -32,6 +32,8 @@ const PLAYER_COLLISION_RADIUS: f32 = PLAYER_WIDTH_SCALED / 2.0;
 const PLAYER_COLLISION_FACTOR: f32 = 0.5;
 const PLAYER_COLLISION_RADIUS_FACTORED: f32 = PLAYER_COLLISION_RADIUS * PLAYER_COLLISION_FACTOR;
 
+const PLAYER_AUTO_DESPAWN_DISTANCE: f32 = 100.0;
+
 const PLAYER_FLAP_FORCE: f32 = 500.0;
 const PLAYING_GRAVITY_STRENGTH: f32 = 1800.0;
 const ANIMATION_GRAVITY_STRENGTH: f32 = 750.0;
@@ -58,10 +60,11 @@ impl Plugin for GameplayPlugin {
             Update,
             (
                 handle_frozen_toggle.run_if(in_state(PlayerState::WaitingToStart)),
-                handle_fall_sound_delay_timer.run_if(in_state(PlayerState::WaitingToFall)),
-                handle_fall_animation.run_if(in_state(PlayerState::Falling)),
                 handle_player_input.run_if(in_state(PlayerState::Flapping)),
+                handle_fall_sound_delay_timer.run_if(in_state(PlayerState::WaitingToFall)),
                 handle_fall_reset_delay_timer.run_if(in_state(PlayerState::Falling)),
+                handle_fall_animation.run_if(in_state(PlayerState::Falling)),
+                handle_auto_despawn.run_if(in_state(PlayerState::Falling)),
             ),
         )
         .add_systems(

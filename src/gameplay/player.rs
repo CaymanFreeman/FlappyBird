@@ -77,6 +77,17 @@ pub(crate) fn despawn_player(mut commands: Commands, player_query: Query<Entity,
     }
 }
 
+pub(crate) fn handle_auto_despawn(
+    mut commands: Commands,
+    player_query: Query<(Entity, &Transform), With<Player>>,
+) {
+    if let Ok((entity, player_transform)) = player_query.get_single() {
+        if player_transform.translation.y < WINDOW_MIN_Y - PLAYER_AUTO_DESPAWN_DISTANCE {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 pub(crate) fn update_player_transform(
     mut player_transform_query: Query<(&mut Player, &mut Transform)>,
     time: Res<Time>,
