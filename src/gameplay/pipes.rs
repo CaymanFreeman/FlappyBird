@@ -1,5 +1,5 @@
 use super::*;
-use crate::app::WindowInfo;
+use crate::app::WINDOW_MIN_X;
 use bevy::window::PrimaryWindow;
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
@@ -32,15 +32,12 @@ impl PipeBundle {
 
 pub(crate) fn update_pipe_transforms(
     mut pipe_query: Query<(&mut Pipe, &mut Transform)>,
-    window_info: Res<WindowInfo>,
     time: Res<Time>,
 ) {
     let mut pipes_to_reset = Vec::new();
 
     for (pipe, transform) in pipe_query.iter() {
-        if transform.translation.x + PIPE_WIDTH * SPRITE_SCALE / 2.0
-            < -window_info.window_dimensions.x / 2.0
-        {
+        if transform.translation.x + PIPE_WIDTH_SCALED / 2.0 < WINDOW_MIN_X {
             pipes_to_reset.push(pipe.direction);
         }
     }
@@ -52,9 +49,7 @@ pub(crate) fn update_pipe_transforms(
         for (pipe, mut transform) in pipe_query.iter_mut() {
             transform.translation.x -= time.delta_secs() * PIPE_SPEED;
 
-            if transform.translation.x + PIPE_WIDTH * SPRITE_SCALE / 2.0
-                < -window_info.window_dimensions.x / 2.0
-            {
+            if transform.translation.x + PIPE_WIDTH_SCALED / 2.0 < WINDOW_MIN_X {
                 transform.translation.x += PIPE_AMOUNT as f32 * PIPE_SPACING * SPRITE_SCALE;
                 transform.translation.y = PIPE_VERTICAL_CENTER * pipe.direction + y_offset;
             }

@@ -1,5 +1,5 @@
 use super::*;
-use crate::app::{AppState, WindowInfo};
+use crate::app::{AppState, WINDOW_MAX_Y, WINDOW_MIN_Y};
 use crate::ui::ScoreTimer;
 use bevy::audio::Volume;
 use pipes::Pipe;
@@ -138,15 +138,14 @@ pub(crate) fn handle_player_collision(
     pipe_transform_query: Query<&Transform, With<Pipe>>,
     mut player_query: Query<&mut Player>,
     score_timer_query: Query<Entity, With<ScoreTimer>>,
-    window_info: Res<WindowInfo>,
     audio: Res<AudioAssets>,
     mut next_player_state: ResMut<NextState<PlayerState>>,
 ) {
     if let Ok(player_transform) = player_transform_query.get_single() {
-        let player_has_collision = player_pipe_collision(&player_transform, pipe_transform_query)
-            || player_screen_collision(&player_transform, &window_info);
+        let pipe_collision = player_pipe_collision(&player_transform, pipe_transform_query);
+        let screen_collision = player_screen_collision(&player_transform);
 
-        if player_has_collision {
+        if pipe_collision || screen_collision {
             if let Ok(score_display) = score_timer_query.get_single() {
                 commands.entity(score_display).despawn();
             }
@@ -170,36 +169,30 @@ fn player_pipe_collision(
     player_transform: &Transform,
     pipe_transform_query: Query<&Transform, With<Pipe>>,
 ) -> bool {
-    let player_radius = (PLAYER_WIDTH.min(PLAYER_HEIGHT) * SPRITE_SCALE) * PLAYER_COLLISION_RATIO;
-    let player_center = player_transform.translation.truncate();
-
     for pipe_transform in pipe_transform_query.iter() {
-        let pipe_rect = Rect {
-            min: Vec2::new(
-                pipe_transform.translation.x - PIPE_HALF_WIDTH,
-                pipe_transform.translation.y - PIPE_HALF_HEIGHT,
-            ),
-            max: Vec2::new(
-                pipe_transform.translation.x + PIPE_HALF_WIDTH,
-                pipe_transform.translation.y + PIPE_HALF_HEIGHT,
-            ),
-        };
+        let too_far_right = pipe_transform.translation.x - PIPE_HALF_WIDTH_SCALED
+            >= PLAYER_COLLISION_RADIUS_FACTORED;
+        let too_far_left = pipe_transform.translation.x + PIPE_HALF_WIDTH_SCALED
+            <= PLAYER_COLLISION_RADIUS_FACTORED;
+        if too_far_right || too_far_left {
+            continue;
+        }
 
-        let closest = Vec2::new(
-            player_center.x.clamp(pipe_rect.min.x, pipe_rect.max.x),
-            player_center.y.clamp(pipe_rect.min.y, pipe_rect.max.y),
-        );
-
-        if player_center.distance(closest) < player_radius {
+        if circle_rectangle_collision(
+            player_transform,
+            PLAYER_COLLISION_RADIUS_FACTORED,
+            pipe_transform,
+            PIPE_WIDTH_SCALED,
+            PIPE_HEIGHT_SCALED,
+        ) {
             return true;
         }
     }
     false
 }
 
-fn player_screen_collision(player_transform: &Transform, window_info: &Res<WindowInfo>) -> bool {
-    player_transform.translation.y <= -window_info.window_dimensions.y / 2.0
-        || player_transform.translation.y >= window_info.window_dimensions.y / 2.0
+fn player_screen_collision(player_transform: &Transform) -> bool {
+    player_transform.translation.y <= WINDOW_MIN_Y || player_transform.translation.y >= WINDOW_MAX_Y
 }
 
 pub(crate) fn handle_fall_sound_delay_timer(

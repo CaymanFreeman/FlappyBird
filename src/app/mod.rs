@@ -1,18 +1,22 @@
 use crate::assets::*;
 use crate::gameplay::*;
 use crate::ui::*;
+use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 
 mod app_state;
-mod window;
 
 // Re-exports
 pub(crate) use app_state::*;
-pub(crate) use window::*;
 
 // Window
-const WINDOW_PIXEL_WIDTH: f32 = 512.0;
-const WINDOW_PIXEL_HEIGHT: f32 = 512.0;
+pub(crate) const WINDOW_WIDTH_PX: f32 = 512.0;
+pub(crate) const WINDOW_HEIGHT_PX: f32 = 512.0;
+pub(crate) const WINDOW_MIN_X: f32 = -WINDOW_WIDTH_PX / 2.0;
+pub(crate) const WINDOW_MAX_Y: f32 = WINDOW_HEIGHT_PX / 2.0;
+pub(crate) const WINDOW_MIN_Y: f32 = -WINDOW_HEIGHT_PX / 2.0;
+const WINDOW_NAME: &str = "Flappy Bird";
+const CANVAS_ID: &str = "#app";
 
 pub struct AppPlugin;
 
@@ -22,17 +26,20 @@ impl Plugin for AppPlugin {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: String::new(),
-                        position: WindowPosition::Centered(MonitorSelection::Primary),
-                        resolution: Vec2::new(WINDOW_PIXEL_WIDTH, WINDOW_PIXEL_HEIGHT).into(),
+                        title: WINDOW_NAME.to_string(),
+                        canvas: Some(CANVAS_ID.into()),
+                        resolution: Vec2::new(WINDOW_WIDTH_PX, WINDOW_HEIGHT_PX).into(),
                         ..Default::default()
                     }),
                     ..Default::default()
                 })
-                .set(ImagePlugin::default_nearest()),
+                .set(ImagePlugin::default_nearest())
+                .set(AssetPlugin {
+                    meta_check: AssetMetaCheck::Never,
+                    ..Default::default()
+                }),
         )
         .init_state::<AppState>()
-        .add_systems(Startup, insert_window_info)
         .add_systems(
             PostStartup,
             |mut next_app_state: ResMut<NextState<AppState>>| {
@@ -105,4 +112,8 @@ impl Plugin for AppPlugin {
         )
         .add_plugins((GameplayPlugin, GameAssetsPlugin, GameUiPlugin));
     }
+}
+
+fn spawn_camera(mut commands: Commands) {
+    commands.spawn(Camera2d::default());
 }
