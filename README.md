@@ -27,7 +27,7 @@
 ## Play
 
 You can play the game [here](https://CaymanFreeman.github.io/FlappyBird). It may take a few seconds to download the
-binary and the page will appear blank while this is happening.
+binary and the page will appear blank while this is happening. The goal of the game is to get as far as possible while dodging the pipes. Press SPACE to flap your wings.
 
 ## Overview
 
